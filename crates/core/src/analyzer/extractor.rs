@@ -50,23 +50,119 @@ impl SymbolExtractor {
             ("struct_item", SymbolKind::Struct),
             ("enum_item", SymbolKind::Enum),
             ("trait_item", SymbolKind::Trait),
-            ("impl_item", SymbolKind::Trait),
-            ("mod_item", SymbolKind::Module),
             ("type_alias_item", SymbolKind::TypeAlias),
+            ("mod_item", SymbolKind::Module),
+            ("const_item", SymbolKind::Constant),
+            ("static_item", SymbolKind::Variable),
         ];
 
-        self.extract_symbols_by_kind(source, node, &symbol_kinds, file_path, symbols);
+        let node_kind = node.kind();
+
+        // Handle impl_item: functions inside declaration_list are methods
+        if node_kind == "impl_item" {
+            let mut cursor = node.walk();
+            for child in node.children(&mut cursor) {
+                if child.kind() == "declaration_list" {
+                    let mut decl_cursor = child.walk();
+                    for decl in child.children(&mut decl_cursor) {
+                        if decl.kind() == "function_item" {
+                            let symbol = self.node_to_symbol(source, decl, SymbolKind::Method, file_path);
+                            if !symbol.name.is_empty() {
+                                symbols.push(symbol);
+                            }
+                        }
+                    }
+                }
+            }
+            return;
+        }
+
+        // Recurse into children first
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            self.extract_rust(source, child, file_path, symbols);
+        }
+
+        // Check if this node itself is a symbol (post-order: inner before outer)
+        for (kind_str, kind) in &symbol_kinds {
+            if node_kind == *kind_str {
+                let symbol = self.node_to_symbol(source, node, kind.clone(), file_path);
+                if !symbol.name.is_empty() {
+                    symbols.push(symbol);
+                }
+                break;
+            }
+        }
     }
 
     /// Extract Python symbols
     fn extract_python(&self, source: &[u8], node: tree_sitter::Node, file_path: &str, symbols: &mut Vec<Symbol>) {
-        let symbol_kinds = [
-            ("function_definition", SymbolKind::Function),
-            ("class_definition", SymbolKind::Class),
-            ("async_function_definition", SymbolKind::Function),
-        ];
+        let node_kind = node.kind();
 
-        self.extract_symbols_by_kind(source, node, &symbol_kinds, file_path, symbols);
+        // Handle class_definition: add class, and its function children as methods
+        if node_kind == "class_definition" {
+            let symbol = self.node_to_symbol(source, node, SymbolKind::Class, file_path);
+            if !symbol.name.is_empty() {
+                symbols.push(symbol);
+            }
+
+            let mut cursor = node.walk();
+            for child in node.children(&mut cursor) {
+                self.extract_python_in_class(source, child, file_path, symbols);
+            }
+            return;
+        }
+
+        // Top-level function_definition
+        if node_kind == "function_definition" || node_kind == "async_function_definition" {
+            let kind = if self.is_in_class(node) { SymbolKind::Method } else { SymbolKind::Function };
+            let symbol = self.node_to_symbol(source, node, kind, file_path);
+            if !symbol.name.is_empty() {
+                symbols.push(symbol);
+            }
+            return;
+        }
+
+        // Recurse into children
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            self.extract_python(source, child, file_path, symbols);
+        }
+    }
+
+    /// Extract children of a class_definition, marking functions as methods
+    fn extract_python_in_class(&self, source: &[u8], node: tree_sitter::Node, file_path: &str, symbols: &mut Vec<Symbol>) {
+        let node_kind = node.kind();
+
+        if node_kind == "function_definition" || node_kind == "async_function_definition" {
+            let symbol = self.node_to_symbol(source, node, SymbolKind::Method, file_path);
+            if !symbol.name.is_empty() {
+                symbols.push(symbol);
+            }
+            return;
+        }
+
+        // Recurse
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            self.extract_python_in_class(source, child, file_path, symbols);
+        }
+    }
+
+    /// Check if a node has a class_definition ancestor
+    fn is_in_class(&self, node: tree_sitter::Node) -> bool {
+        let mut current = node;
+        loop {
+            match current.parent() {
+                Some(parent) => {
+                    if parent.kind() == "class_definition" {
+                        return true;
+                    }
+                    current = parent;
+                }
+                None => return false,
+            }
+        }
     }
 
     /// Extract JavaScript/TypeScript symbols
@@ -95,14 +191,96 @@ impl SymbolExtractor {
 
     /// Extract Go symbols
     fn extract_go(&self, source: &[u8], node: tree_sitter::Node, file_path: &str, symbols: &mut Vec<Symbol>) {
-        let symbol_kinds = [
-            ("function_declaration", SymbolKind::Function),
-            ("method_declaration", SymbolKind::Method),
-            ("type_declaration", SymbolKind::Struct),
-            ("const_declaration", SymbolKind::Constant),
-        ];
+        let node_kind = node.kind();
 
-        self.extract_symbols_by_kind(source, node, &symbol_kinds, file_path, symbols);
+        match node_kind {
+            "function_declaration" => {
+                let mut symbol = self.node_to_symbol(source, node, SymbolKind::Function, file_path);
+                if !symbol.name.is_empty() {
+                    symbols.push(symbol);
+                }
+            }
+            "method_declaration" => {
+                // For methods, skip the receiver identifier
+                let mut symbol = self.node_to_symbol(source, node, SymbolKind::Method, file_path);
+                let method_name = self.extract_method_name(source, node);
+                if !method_name.is_empty() {
+                    symbol.name = method_name;
+                    symbols.push(symbol);
+                }
+            }
+            "type_declaration" => {
+                // Check the type_spec child to determine struct vs interface
+                let mut cursor = node.walk();
+                for child in node.children(&mut cursor) {
+                    if child.kind() == "type_spec" {
+                        let mut ts_cursor = child.walk();
+                        for ts_child in child.children(&mut ts_cursor) {
+                            let type_name = self.extract_type_name(source, node);
+                            if ts_child.kind() == "struct_type" && !type_name.is_empty() {
+                                let mut symbol = self.node_to_symbol(source, node, SymbolKind::Struct, file_path);
+                                symbol.name = type_name;
+                                symbols.push(symbol);
+                            } else if ts_child.kind() == "interface_type" && !type_name.is_empty() {
+                                let mut symbol = self.node_to_symbol(source, node, SymbolKind::Interface, file_path);
+                                symbol.name = type_name;
+                                symbols.push(symbol);
+                            }
+                        }
+                    }
+                }
+            }
+            "const_declaration" => {
+                let mut symbol = self.node_to_symbol(source, node, SymbolKind::Constant, file_path);
+                if !symbol.name.is_empty() {
+                    symbols.push(symbol);
+                }
+            }
+            _ => {}
+        }
+
+        // Recurse into children
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            self.extract_go(source, child, file_path, symbols);
+        }
+    }
+
+    /// Extract the method name from a method_declaration, skipping receiver identifier
+    fn extract_method_name(&self, source: &[u8], node: tree_sitter::Node) -> String {
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            let child_kind = child.kind();
+            if child_kind == "identifier" || child_kind == "field_identifier" {
+                if let Some(parent) = child.parent() {
+                    if parent.kind() == "receiver" {
+                        continue;
+                    }
+                }
+                if let Ok(text) = child.utf8_text(source) {
+                    return text.to_string();
+                }
+            }
+        }
+        String::new()
+    }
+
+    /// Extract the type name from a type_declaration
+    fn extract_type_name(&self, source: &[u8], node: tree_sitter::Node) -> String {
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            if child.kind() == "type_spec" {
+                let mut ts_cursor = child.walk();
+                for ts_child in child.children(&mut ts_cursor) {
+                    if ts_child.kind() == "type_identifier" || ts_child.kind() == "identifier" {
+                        if let Ok(text) = ts_child.utf8_text(source) {
+                            return text.to_string();
+                        }
+                    }
+                }
+            }
+        }
+        self.extract_name(source, node)
     }
 
     /// Extract symbols by node kind
@@ -153,7 +331,7 @@ impl SymbolExtractor {
         symbol.signature = signature;
 
         // Check for visibility
-        symbol.is_public = self.is_public_node(node);
+        symbol.is_public = self.is_public_node(source, node);
 
         // Check for async
         symbol.is_async = self.is_async_node(node);
@@ -192,9 +370,16 @@ impl SymbolExtractor {
 
     /// Extract source code for a node
     fn extract_code(&self, source: &[u8], node: tree_sitter::Node) -> String {
-        node.utf8_text(source)
-            .map(|s| s.to_string())
-            .unwrap_or_default()
+        // Validate byte range before accessing
+        let start = node.start_byte();
+        let end = node.end_byte();
+
+        if start < source.len() && end <= source.len() && start <= end {
+            if let Ok(text) = node.utf8_text(source) {
+                return text.to_string();
+            }
+        }
+        String::new()
     }
 
     /// Extract signature from a node
@@ -237,13 +422,18 @@ impl SymbolExtractor {
     }
 
     /// Check if a node represents a public declaration
-    fn is_public_node(&self, node: tree_sitter::Node) -> bool {
+    fn is_public_node(&self, source: &[u8], node: tree_sitter::Node) -> bool {
         let mut cursor = node.walk();
 
         for child in node.children(&mut cursor) {
             if child.kind() == "visibility_modifier" {
-                if let Ok(text) = child.utf8_text(&[]) {
-                    return text.contains("pub");
+                // Validate byte range
+                let start = child.start_byte();
+                let end = child.end_byte();
+                if start < source.len() && end <= source.len() && start <= end {
+                    if let Ok(text) = child.utf8_text(source) {
+                        return text.contains("pub");
+                    }
                 }
             }
             if child.kind() == "export" {

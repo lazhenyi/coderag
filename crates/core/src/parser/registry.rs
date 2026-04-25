@@ -88,7 +88,9 @@ impl LanguageRegistry {
 
         // Register extensions
         for ext in &config.extensions {
-            self.extension_map.insert(ext.clone(), config.language.clone());
+            // Strip leading dot for path.extension() compatibility
+            let key = ext.strip_prefix('.').unwrap_or(ext);
+            self.extension_map.insert(key.to_string(), config.language.clone());
         }
 
         // Register shebangs

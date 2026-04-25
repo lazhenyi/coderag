@@ -373,6 +373,7 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
+    #[ignore] // Requires running from within a git repository
     fn test_open_current_repo() {
         // Open this very repository for testing
         let repo = GitRepo::open(".").unwrap();
@@ -383,6 +384,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore] // Requires running from within a git repository
     fn test_walk_tree() {
         let repo = GitRepo::open(".").unwrap();
         let head = repo.head_commit().unwrap();

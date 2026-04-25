@@ -1,6 +1,6 @@
 ---
 active: true
-iteration: 1
+iteration: 2
 session_id: 
 max_iterations: 100
 completion_promise: "直到达到README.md中的验收标准"

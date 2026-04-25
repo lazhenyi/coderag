@@ -73,16 +73,20 @@ mod tests {
         cache.put("b", 2);
         cache.put("c", 3);
 
-        assert_eq!(cache.get(&"a"), Some(&1));
-        assert_eq!(cache.get(&"b"), Some(&2));
-        assert_eq!(cache.get(&"c"), Some(&3));
+        // After puts, map order is [a, b, c] (a oldest)
+        assert_eq!(cache.len(), 3);
 
-        // Adding d should evict the oldest (b, since a was accessed)
+        // Access a, moves to end
+        cache.get(&"a");
+        // Order: [b, c, a]
+
+        // Adding d should evict b (oldest)
         cache.put("d", 4);
 
-        assert!(!cache.map.contains_key(&"b"));
-        assert_eq!(cache.get(&"a"), Some(&1));
-        assert_eq!(cache.get(&"c"), Some(&3));
-        assert_eq!(cache.get(&"d"), Some(&4));
+        // b should be evicted, a and c should remain
+        assert!(!cache.map.contains_key(&"b"), "b should be evicted");
+        assert!(cache.map.contains_key(&"a"), "a should remain");
+        assert!(cache.map.contains_key(&"c"), "c should remain");
+        assert!(cache.map.contains_key(&"d"), "d should be present");
     }
 }
