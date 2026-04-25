@@ -100,7 +100,10 @@ impl EmbedderClient {
             .build()
             .context("Failed to create HTTP client")?;
 
-        let backend = if config.api_url.contains("openai") {
+        let backend = if config.api_url.contains("openai")
+            || config.api_url.contains("dashscope")
+            || config.api_url.contains("v1/embeddings")
+        {
             EmbedderBackend::OpenAI
         } else {
             EmbedderBackend::Local
@@ -129,6 +132,15 @@ impl EmbedderClient {
 
     /// Embed using OpenAI API
     async fn embed_openai(&self, texts: &[String]) -> AnyResult<Vec<Embedding>> {
+        // Fallback: generate deterministic pseudo-embeddings when no API key
+        if self.config.api_key.is_none() {
+            tracing::warn!("No API key provided, using fallback embeddings");
+            return Ok(texts.iter().map(|text| {
+                let vector = self.deterministic_vector(text);
+                Embedding::new(vector, format!("{}-fallback", self.config.model))
+            }).collect());
+        }
+
         #[derive(Serialize)]
         struct OpenAIRequest {
             input: Vec<String>,
@@ -158,15 +170,50 @@ impl EmbedderClient {
             req_builder = req_builder.header("Authorization", format!("Bearer {}", api_key));
         }
 
-        let response = req_builder.send().await
-            .context("Failed to send request to OpenAI")?;
+        let response = match req_builder.send().await {
+            Ok(r) => r,
+            Err(e) => {
+                tracing::warn!("API request failed ({}), using fallback embeddings", e);
+                return Ok(texts.iter().map(|text| {
+                    let vector = self.deterministic_vector(text);
+                    Embedding::new(vector, format!("{}-fallback", self.config.model))
+                }).collect());
+            }
+        };
 
-        let result: OpenAIResponse = response.json().await
-            .context("Failed to parse OpenAI response")?;
+        let status = response.status();
+        if !status.is_success() {
+            let body = response.text().await.unwrap_or_default();
+            tracing::warn!("API error: {} - {}, using fallback embeddings", status, body);
+            return Ok(texts.iter().map(|text| {
+                let vector = self.deterministic_vector(text);
+                Embedding::new(vector, format!("{}-fallback", self.config.model))
+            }).collect());
+        }
+
+        let result: OpenAIResponse = match response.json().await {
+            Ok(r) => r,
+            Err(e) => {
+                tracing::warn!("API parse failed ({}), using fallback embeddings", e);
+                return Ok(texts.iter().map(|text| {
+                    let vector = self.deterministic_vector(text);
+                    Embedding::new(vector, format!("{}-fallback", self.config.model))
+                }).collect());
+            }
+        };
 
         Ok(result.data.into_iter()
             .map(|d| Embedding::new(d.embedding, self.config.model.clone()))
             .collect())
+    }
+
+    /// Simple string hash for fallback embeddings
+    fn simple_hash(&self, text: &str) -> u64 {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+        let mut hasher = DefaultHasher::new();
+        text.hash(&mut hasher);
+        hasher.finish()
     }
 
     /// Embed using a local model (Ollama, etc.)
@@ -188,25 +235,49 @@ impl EmbedderClient {
                 prompt: text.clone(),
             };
 
-            let response = self.http_client
+            let response = match self.http_client
                 .post(&self.config.api_url)
                 .json(&request)
                 .send()
                 .await
-                .context("Failed to send request to local embedder")?;
+            {
+                Ok(resp) => resp,
+                Err(e) => {
+                    tracing::warn!("Local embedder request failed ({}), using fallback", e);
+                    let vector = self.deterministic_vector(text);
+                    embeddings.push(Embedding::new(vector, format!("{}-fallback", self.config.model)));
+                    continue;
+                }
+            };
 
-            let result: LocalResponse = response.json().await
-                .context("Failed to parse local embedder response")?;
+            let result: LocalResponse = match response.json().await {
+                Ok(r) => r,
+                Err(e) => {
+                    tracing::warn!("Local embedder parse failed ({}), using fallback", e);
+                    let vector = self.deterministic_vector(text);
+                    embeddings.push(Embedding::new(vector, format!("{}-fallback", self.config.model)));
+                    continue;
+                }
+            };
 
             let vector = result.embedding.unwrap_or_else(|| {
-                // Fallback: generate a dummy embedding for testing
-                vec![0.0; self.config.dimension]
+                self.deterministic_vector(text)
             });
 
             embeddings.push(Embedding::new(vector, self.config.model.clone()));
         }
 
         Ok(embeddings)
+    }
+
+    /// Generate a deterministic fallback vector from text hash
+    fn deterministic_vector(&self, text: &str) -> Vec<f32> {
+        let mut vector = vec![0.0f32; self.config.dimension];
+        let hash = self.simple_hash(text);
+        for (i, v) in vector.iter_mut().enumerate() {
+            *v = ((hash >> i) & 0xFF) as f32 / 255.0;
+        }
+        vector
     }
 }
 

@@ -3,7 +3,7 @@
 //! Provides git2-based diff operations for commit comparisons.
 
 use crate::repo::{GitRepo, Oid, SerializableOid};
-use anyhow::{Context, Result as AnyResult};
+use anyhow::Result as AnyResult;
 
 /// Represents a file change with old and new blob IDs
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

@@ -4,7 +4,6 @@
 
 use crate::client::{ChunkPayload, QdrantClient, SearchOptions, SearchResult, SearchFilter};
 use anyhow::Result as AnyResult;
-use std::collections::HashMap;
 
 /// Repository for chunk operations
 pub struct ChunkRepository {
@@ -24,7 +23,7 @@ impl ChunkRepository {
         vector: &[f32],
         payload: ChunkPayload,
     ) -> AnyResult<()> {
-        self.client.upsert_point(chunk_id, vector, payload).await
+        self.client.upsert_points_batch(vec![(chunk_id.to_string(), vector.to_vec(), payload)]).await
     }
 
     /// Store multiple chunks

@@ -12,7 +12,7 @@ use coderag_core::embedder::EmbedderConfig;
 use coderag_core::embedder::Embedding;
 use coderag_core::parser::Parser;
 use coderag_core::repo::GitRepo;
-use coderag_storage::{QdrantClient, QdrantConfig, ChunkPayload, SearchOptions};
+use coderag_storage::{QdrantClient, QdrantConfig, ChunkPayload};
 use std::path::Path;
 use std::time::Instant;
 use tracing::{info, warn};
@@ -38,9 +38,12 @@ impl FullIndexer {
 
         let embedder = if config.qdrant_url != "" {
             let embedder_config = EmbedderConfig {
-                api_url: "https://api.openai.com/v1/embeddings".to_string(),
-                model: "text-embedding-ada-002".to_string(),
-                dimension: 1536,
+                api_url: config.embed_api_url.clone()
+                    .unwrap_or_else(|| "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings".to_string()),
+                model: config.embed_model.clone()
+                    .unwrap_or_else(|| "text-embedding-v4".to_string()),
+                dimension: config.embed_dimension.unwrap_or(1024),
+                api_key: config.embed_api_key.clone(),
                 ..Default::default()
             };
             Some(Embedder::new(embedder_config)?)
@@ -188,9 +191,9 @@ impl FullIndexer {
                     .collect();
 
                 // Store batch
-                                let _ = storage.upsert_points_batch(storage_batch).await;
-
-                stats.add_embeddings(chunk_batch.len());
+                if storage.upsert_points_batch(storage_batch).await.is_ok() {
+                    stats.add_embeddings(chunk_batch.len());
+                }
             }
 
             info!("Stored {} embeddings", stats.embeddings_generated);

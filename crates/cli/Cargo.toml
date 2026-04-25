@@ -4,6 +4,9 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
+description = "CLI for CodeRAG — AST-based code RAG system"
+repository.workspace = true
+homepage.workspace = true
 
 [[bin]]
 name = "coderag"
@@ -21,6 +24,8 @@ tracing-subscriber = { workspace = true }
 tracing-appender = "0.2"
 serde = { workspace = true }
 serde_json = { workspace = true }
+dotenvy = { workspace = true }
+dirs = { workspace = true }
 
 [dev-dependencies]
 tempfile = "3"

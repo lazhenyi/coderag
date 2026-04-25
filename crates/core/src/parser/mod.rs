@@ -8,7 +8,6 @@ mod languages;
 pub use registry::{LanguageRegistry, LanguageConfig};
 pub use languages::Language;
 
-use std::collections::HashMap;
 use std::path::Path;
 use anyhow::{Context, Result as AnyResult};
 
@@ -74,10 +73,25 @@ impl Parser {
         parser.set_language(&ts_language)
             .context("Failed to set language")?;
 
-        let tree = parser.parse(source, None)
-            .context("Failed to parse source")?;
+        let result = std::panic::catch_unwind(
+            std::panic::AssertUnwindSafe(|| parser.parse(source, None))
+        );
 
-        Ok(ParseResult { tree, language })
+        match result {
+            Ok(Some(tree)) => Ok(ParseResult { tree, language }),
+            Ok(None) => anyhow::bail!("Parser returned no tree for language '{}'", language),
+            Err(e) => {
+                let msg = if let Some(s) = e.downcast_ref::<&str>() {
+                    s.to_string()
+                } else if let Some(s) = e.downcast_ref::<String>() {
+                    s.clone()
+                } else {
+                    "unknown parser panic".to_string()
+                };
+                tracing::warn!("Tree-sitter panic for language '{}': {}", language, msg);
+                anyhow::bail!("Tree-sitter panic for language '{}': {}", language, msg)
+            }
+        }
     }
 
     /// List all supported languages

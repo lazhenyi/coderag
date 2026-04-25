@@ -7,8 +7,7 @@ mod client;
 pub use client::{EmbedderClient, EmbedderConfig, Embedding};
 
 use crate::chunker::{Chunk, chunk_to_embedding_text};
-use anyhow::{Context, Result as AnyResult};
-use std::collections::HashMap;
+use anyhow::Result as AnyResult;
 
 /// Embedder for generating code embeddings
 pub struct Embedder {
@@ -117,7 +116,6 @@ impl Default for EmbeddingBatch {
 mod tests {
     use super::*;
     use crate::chunker::Chunk;
-    use crate::analyzer::symbol::SymbolKind;
 
     #[test]
     fn test_embedding_result() {

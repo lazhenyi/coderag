@@ -54,6 +54,20 @@ impl LanguageRegistry {
         registry.register_language(super::languages::typescript_config())?;
         registry.register_language(super::languages::java_config())?;
         registry.register_language(super::languages::go_config())?;
+        registry.register_language(super::languages::c_config())?;
+        registry.register_language(super::languages::cpp_config())?;
+        registry.register_language(super::languages::csharp_config())?;
+        registry.register_language(super::languages::swift_config())?;
+        registry.register_language(super::languages::php_config())?;
+        registry.register_language(super::languages::ruby_config())?;
+        registry.register_language(super::languages::bash_config())?;
+        registry.register_language(super::languages::scala_config())?;
+        registry.register_language(super::languages::dart_config())?;
+        registry.register_language(super::languages::lua_config())?;
+        registry.register_language(super::languages::r_config())?;
+        registry.register_language(super::languages::perl_config())?;
+        registry.register_language(super::languages::kotlin_config())?;
+        registry.register_language(super::languages::sql_config())?;
 
         Ok(registry)
     }
@@ -74,6 +88,20 @@ impl LanguageRegistry {
                 Language::TypeScript => super::languages::typescript_config(),
                 Language::Java => super::languages::java_config(),
                 Language::Go => super::languages::go_config(),
+                Language::C => super::languages::c_config(),
+                Language::Cpp => super::languages::cpp_config(),
+                Language::CSharp => super::languages::csharp_config(),
+                Language::Swift => super::languages::swift_config(),
+                Language::Php => super::languages::php_config(),
+                Language::Ruby => super::languages::ruby_config(),
+                Language::Shell => super::languages::bash_config(),
+                Language::Scala => super::languages::scala_config(),
+                Language::Dart => super::languages::dart_config(),
+                Language::Lua => super::languages::lua_config(),
+                Language::R => super::languages::r_config(),
+                Language::Perl => super::languages::perl_config(),
+                Language::Kotlin => super::languages::kotlin_config(),
+                Language::Sql => super::languages::sql_config(),
                 _ => anyhow::bail!("Unsupported language: {:?}", lang),
             };
             registry.register_language(config)?;

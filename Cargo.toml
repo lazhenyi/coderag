@@ -5,14 +5,18 @@ members = [
     "crates/storage",
     "crates/indexer",
     "crates/cli",
+    "crates/coderag",
 ]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-authors = ["CodeRAG Team"]
+authors = ["ZhenYi <434836402@qq.com>"]
 license = "MIT"
 rust-version = "1.93.0"
+repository = "https://github.com/lazhenyi/coderag"
+homepage = "https://github.com/lazhenyi/coderag"
+documentation = "https://docs.rs/coderag"
 
 [workspace.dependencies]
 # Git
@@ -26,6 +30,20 @@ tree-sitter-javascript = "0.25.0"
 tree-sitter-typescript = "0.23.2"
 tree-sitter-java = "0.23.5"
 tree-sitter-go = "0.25.0"
+tree-sitter-c = "0.24.2"
+tree-sitter-cpp = "0.23.0"
+tree-sitter-c-sharp = "0.23.0"
+tree-sitter-swift = "0.7.0"
+tree-sitter-php = "0.24.2"
+tree-sitter-ruby = "0.23.0"
+tree-sitter-bash = "0.25.1"
+tree-sitter-scala = "0.26.0"
+tree-sitter-dart = "0.1.0"
+tree-sitter-lua = "0.5.0"
+tree-sitter-r = "1.2"
+tree-sitter-perl = "1.1"
+tree-sitter-sequel = "0.3.11"
+tree-sitter-kotlin-sg = "0.4.0"
 
 # Async runtime
 tokio = { version = "1", features = ["full"] }
@@ -40,6 +58,8 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+dotenvy = "0.15"
+dirs = "6.0.0"
 sha2 = "0.11.0"
 hex = "0.4"
 uuid = { version = "1", features = ["v4"] }

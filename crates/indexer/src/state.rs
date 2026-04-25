@@ -128,7 +128,7 @@ mod tests {
         manager.set_last_commit("test-repo", commit)?;
 
         // Verify it was saved
-        let loaded_manager = StateManager::new(&state_file)?;
+        let _loaded_manager = StateManager::new(&state_file)?;
         assert_eq!(manager.get_last_commit("test-repo"), Some(commit));
 
         Ok(())

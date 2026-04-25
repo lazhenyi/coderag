@@ -5,10 +5,12 @@
 mod full;
 mod incremental;
 mod state;
+mod eval;
 
 pub use full::FullIndexer;
 pub use incremental::IncrementalIndexer;
-pub use state::IndexerState;
+pub use state::{IndexerState, StateManager};
+pub use eval::{evaluate, default_queries, print_report, EvalMetrics};
 
 /// Indexer configuration
 #[derive(Debug, Clone)]
@@ -27,6 +29,14 @@ pub struct IndexConfig {
     pub qdrant_url: String,
     /// Qdrant API key
     pub qdrant_api_key: Option<String>,
+    /// Embedding API URL
+    pub embed_api_url: Option<String>,
+    /// Embedding API key
+    pub embed_api_key: Option<String>,
+    /// Embedding model name
+    pub embed_model: Option<String>,
+    /// Embedding dimension
+    pub embed_dimension: Option<usize>,
 }
 
 impl Default for IndexConfig {
@@ -37,8 +47,12 @@ impl Default for IndexConfig {
             tracked_languages: Vec::new(),
             batch_size: 100,
             collection_name: "coderag".to_string(),
-            qdrant_url: "http://localhost:6334".to_string(),
+            qdrant_url: "http://localhost:6333".to_string(),
             qdrant_api_key: None,
+            embed_api_url: None,
+            embed_api_key: None,
+            embed_model: None,
+            embed_dimension: None,
         }
     }
 }

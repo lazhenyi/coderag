@@ -126,23 +126,183 @@ pub fn go_config() -> LanguageConfig {
     }
 }
 
-/// Get all Top 5 language configurations (for quick setup)
-pub fn top5_configs() -> Vec<LanguageConfig> {
+/// Get C language configuration
+pub fn c_config() -> LanguageConfig {
+    LanguageConfig {
+        language: Language::C,
+        name: "C".to_string(),
+        extensions: vec![".c".to_string(), ".h".to_string()],
+        tree_sitter_lang: tree_sitter_c::LANGUAGE.into(),
+        comment_style: CommentStyle::CStyle,
+    }
+}
+
+/// Get C++ language configuration
+pub fn cpp_config() -> LanguageConfig {
+    LanguageConfig {
+        language: Language::Cpp,
+        name: "C++".to_string(),
+        extensions: vec![".cpp".to_string(), ".cc".to_string(), ".cxx".to_string(), ".hpp".to_string(), ".hh".to_string()],
+        tree_sitter_lang: tree_sitter_cpp::LANGUAGE.into(),
+        comment_style: CommentStyle::CStyle,
+    }
+}
+
+/// Get C# language configuration
+pub fn csharp_config() -> LanguageConfig {
+    LanguageConfig {
+        language: Language::CSharp,
+        name: "C#".to_string(),
+        extensions: vec![".cs".to_string()],
+        tree_sitter_lang: tree_sitter_c_sharp::LANGUAGE.into(),
+        comment_style: CommentStyle::CStyle,
+    }
+}
+
+/// Get Swift language configuration
+pub fn swift_config() -> LanguageConfig {
+    LanguageConfig {
+        language: Language::Swift,
+        name: "Swift".to_string(),
+        extensions: vec![".swift".to_string()],
+        tree_sitter_lang: tree_sitter_swift::LANGUAGE.into(),
+        comment_style: CommentStyle::CStyle,
+    }
+}
+
+/// Get PHP language configuration
+pub fn php_config() -> LanguageConfig {
+    LanguageConfig {
+        language: Language::Php,
+        name: "PHP".to_string(),
+        extensions: vec![".php".to_string()],
+        tree_sitter_lang: tree_sitter_php::LANGUAGE_PHP.into(),
+        comment_style: CommentStyle::CStyle,
+    }
+}
+
+/// Get Ruby language configuration
+pub fn ruby_config() -> LanguageConfig {
+    LanguageConfig {
+        language: Language::Ruby,
+        name: "Ruby".to_string(),
+        extensions: vec![".rb".to_string()],
+        tree_sitter_lang: tree_sitter_ruby::LANGUAGE.into(),
+        comment_style: CommentStyle::ShellStyle,
+    }
+}
+
+/// Get Bash language configuration
+pub fn bash_config() -> LanguageConfig {
+    LanguageConfig {
+        language: Language::Shell,
+        name: "Bash".to_string(),
+        extensions: vec![".sh".to_string(), ".bash".to_string()],
+        tree_sitter_lang: tree_sitter_bash::LANGUAGE.into(),
+        comment_style: CommentStyle::ShellStyle,
+    }
+}
+
+/// Get Scala language configuration
+pub fn scala_config() -> LanguageConfig {
+    LanguageConfig {
+        language: Language::Scala,
+        name: "Scala".to_string(),
+        extensions: vec![".scala".to_string()],
+        tree_sitter_lang: tree_sitter_scala::LANGUAGE.into(),
+        comment_style: CommentStyle::CStyle,
+    }
+}
+
+/// Get Dart language configuration
+pub fn dart_config() -> LanguageConfig {
+    LanguageConfig {
+        language: Language::Dart,
+        name: "Dart".to_string(),
+        extensions: vec![".dart".to_string()],
+        tree_sitter_lang: tree_sitter_dart::LANGUAGE.into(),
+        comment_style: CommentStyle::CStyle,
+    }
+}
+
+/// Get Lua language configuration
+pub fn lua_config() -> LanguageConfig {
+    LanguageConfig {
+        language: Language::Lua,
+        name: "Lua".to_string(),
+        extensions: vec![".lua".to_string()],
+        tree_sitter_lang: tree_sitter_lua::LANGUAGE.into(),
+        comment_style: CommentStyle::ShellStyle,
+    }
+}
+
+/// Get R language configuration
+pub fn r_config() -> LanguageConfig {
+    LanguageConfig {
+        language: Language::R,
+        name: "R".to_string(),
+        extensions: vec![".r".to_string(), ".R".to_string()],
+        tree_sitter_lang: tree_sitter_r::LANGUAGE.into(),
+        comment_style: CommentStyle::ShellStyle,
+    }
+}
+
+/// Get Perl language configuration
+pub fn perl_config() -> LanguageConfig {
+    LanguageConfig {
+        language: Language::Perl,
+        name: "Perl".to_string(),
+        extensions: vec![".pl".to_string(), ".pm".to_string()],
+        tree_sitter_lang: tree_sitter_perl::LANGUAGE.into(),
+        comment_style: CommentStyle::ShellStyle,
+    }
+}
+
+/// Get Kotlin language configuration
+pub fn kotlin_config() -> LanguageConfig {
+    LanguageConfig {
+        language: Language::Kotlin,
+        name: "Kotlin".to_string(),
+        extensions: vec![".kt".to_string(), ".kts".to_string()],
+        tree_sitter_lang: tree_sitter_kotlin_sg::LANGUAGE.into(),
+        comment_style: CommentStyle::CStyle,
+    }
+}
+
+/// Get SQL language configuration
+pub fn sql_config() -> LanguageConfig {
+    LanguageConfig {
+        language: Language::Sql,
+        name: "SQL".to_string(),
+        extensions: vec![".sql".to_string()],
+        tree_sitter_lang: tree_sitter_sequel::LANGUAGE.into(),
+        comment_style: CommentStyle::CStyle,
+    }
+}
+
+/// Get all language configurations (Top 20)
+#[allow(dead_code)]
+pub fn all_configs() -> Vec<LanguageConfig> {
     vec![
         rust_config(),
         python_config(),
         javascript_config(),
+        typescript_config(),
         java_config(),
         go_config(),
+        c_config(),
+        cpp_config(),
+        csharp_config(),
+        swift_config(),
+        php_config(),
+        ruby_config(),
+        bash_config(),
+        scala_config(),
+        dart_config(),
+        lua_config(),
+        r_config(),
+        perl_config(),
+        kotlin_config(),
+        sql_config(),
     ]
-}
-
-/// Get all language configurations (Top 20)
-pub fn all_configs() -> Vec<LanguageConfig> {
-    let mut configs = top5_configs();
-
-    // Add more languages as they're implemented
-    // C, C++, C#, Swift, Kotlin, PHP, Ruby, Scala, Dart, Lua, R, Perl, Shell, SQL
-
-    configs
 }

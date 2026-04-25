@@ -9,7 +9,6 @@ pub use git2::{Oid, Repository, Tree};
 
 use std::collections::HashSet;
 use std::path::Path;
-use parking_lot::RwLock;
 use anyhow::{Context, Result as AnyResult};
 
 /// Oid wrapper that supports serialization
@@ -276,7 +275,7 @@ impl GitRepo {
     }
 
     /// Get the HEAD reference
-    pub fn head(&self) -> AnyResult<git2::Reference> {
+    pub fn head(&self) -> AnyResult<git2::Reference<'_>> {
         self.repo.head()
             .context("Failed to get HEAD reference")
     }
@@ -305,15 +304,13 @@ impl GitRepo {
         let mut diff_options = git2::DiffOptions::new();
         diff_options.ignore_filemode(true);
 
-        let mut diff = self.repo.diff_tree_to_tree(
+        let diff = self.repo.diff_tree_to_tree(
             Some(&old_tree),
             Some(&new_tree),
             Some(&mut diff_options),
         ).context("Failed to compute diff")?;
 
         let mut files = Vec::new();
-        let mut insertions = 0;
-        let mut deletions = 0;
 
         diff.foreach(
             &mut |delta, _hunk| {
@@ -328,8 +325,8 @@ impl GitRepo {
         )?;
 
         let stats = diff.stats()?;
-        insertions = stats.insertions() as usize;
-        deletions = stats.deletions() as usize;
+        let insertions = stats.insertions() as usize;
+        let deletions = stats.deletions() as usize;
 
         Ok(DiffCommitsResult {
             old_commit: old_commit_oid,
@@ -341,7 +338,7 @@ impl GitRepo {
     }
 
     /// Get diff between two trees
-    pub fn diff_trees(&self, old_tree: &Tree, new_tree: &Tree) -> AnyResult<git2::Diff> {
+    pub fn diff_trees(&self, old_tree: &Tree, new_tree: &Tree) -> AnyResult<git2::Diff<'_>> {
         let mut diff_options = git2::DiffOptions::new();
         diff_options.ignore_filemode(true);
 
@@ -370,7 +367,6 @@ pub struct DiffCommitsResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
 
     #[test]
     #[ignore] // Requires running from within a git repository
