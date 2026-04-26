@@ -321,6 +321,144 @@ async fn repo_tree(state: web::Data<AppState>) -> HttpResponse {
     }
 }
 
+#[derive(Serialize)]
+struct GraphNode {
+    id: String,
+    name: String,
+    kind: String,
+    file: String,
+    module: String,
+    language: String,
+    score: f32,
+    code: String,
+    doc: Option<String>,
+    signature: String,
+    start_line: usize,
+    end_line: usize,
+    val: u32,
+}
+
+#[derive(Serialize)]
+struct GraphLink {
+    source: String,
+    target: String,
+    relation: String,
+}
+
+#[derive(Deserialize)]
+struct GraphSearchRequest {
+    query: String,
+    #[serde(default)]
+    language: Option<String>,
+    #[serde(default = "default_limit")]
+    limit: usize,
+    #[serde(default = "default_use_local")]
+    local: bool,
+    #[serde(default = "default_score_threshold")]
+    score_threshold: f32,
+}
+
+async fn search_graph(
+    req: web::Json<GraphSearchRequest>,
+    state: web::Data<AppState>,
+) -> HttpResponse {
+    let storage = match create_storage(&state.config, req.local).await {
+        Ok(s) => s,
+        Err(e) => return HttpResponse::InternalServerError().json(serde_json::json!({"error": e.to_string()})),
+    };
+
+    let embedder = match create_embedder(&state.config) {
+        Ok(e) => e,
+        Err(e) => return HttpResponse::InternalServerError().json(serde_json::json!({"error": e.to_string()})),
+    };
+
+    let query_chunk = coderag_core::chunker::Chunk {
+        id: "query".into(),
+        content_hash: "".into(),
+        repo: state.config.repo_path.clone(),
+        branch: "main".into(),
+        commit: "".into(),
+        language: req.language.clone().unwrap_or_default(),
+        file: "".into(),
+        module: "".into(),
+        symbol: "".into(),
+        kind: "query".into(),
+        signature: req.query.clone(),
+        doc: None,
+        code: req.query.clone(),
+        start_line: 0,
+        end_line: 0,
+    };
+
+    let embedding = match embedder.embed_chunk(&query_chunk).await {
+        Ok(e) => e,
+        Err(e) => return HttpResponse::InternalServerError().json(serde_json::json!({"error": format!("Embedding failed: {}", e)})),
+    };
+
+    let filter = SearchFilter {
+        language: req.language.clone(),
+        ..Default::default()
+    };
+
+    let options = SearchOptions {
+        limit: req.limit,
+        score_threshold: Some(req.score_threshold),
+        filter: if filter.language.is_some() || filter.file.is_some() || filter.kind.is_some() {
+            Some(filter)
+        } else {
+            None
+        },
+        ..Default::default()
+    };
+
+    let results = match storage.search(&embedding.vector, options).await {
+        Ok(r) => r,
+        Err(e) => return HttpResponse::InternalServerError().json(serde_json::json!({"error": e.to_string()})),
+    };
+
+    let nodes: Vec<GraphNode> = results.iter().map(|r| GraphNode {
+        id: r.id.clone(),
+        name: r.payload.symbol.clone(),
+        kind: r.payload.kind.clone(),
+        file: r.payload.file.clone(),
+        module: r.payload.module.clone(),
+        language: r.payload.language.clone(),
+        score: r.score,
+        code: r.payload.code.clone(),
+        doc: r.payload.doc.clone(),
+        signature: r.payload.signature.clone(),
+        start_line: r.payload.start_line,
+        end_line: r.payload.end_line,
+        val: (r.score * 20.0).max(3.0).min(20.0) as u32,
+    }).collect();
+
+    let mut links: Vec<GraphLink> = Vec::new();
+    for i in 0..nodes.len() {
+        for j in (i + 1)..nodes.len() {
+            let a = &nodes[i];
+            let b = &nodes[j];
+            // Same file relationship
+            if a.file == b.file && !a.file.is_empty() {
+                links.push(GraphLink { source: a.id.clone(), target: b.id.clone(), relation: "same_file".into() });
+            }
+            // Same module relationship
+            if a.module == b.module && !a.module.is_empty() {
+                links.push(GraphLink { source: a.id.clone(), target: b.id.clone(), relation: "same_module".into() });
+            }
+            // Same language
+            if a.language == b.language && !a.language.is_empty() && a.language != b.language {
+                // already same language, skip
+            }
+        }
+    }
+
+    HttpResponse::Ok().json(serde_json::json!({
+        "nodes": nodes,
+        "links": links,
+        "total": nodes.len(),
+    }))
+}
+
 async fn languages() -> HttpResponse {
     let langs = vec![
         LanguageInfo { name: "Rust".into(), extensions: vec![".rs".into()] },
@@ -443,6 +581,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(middleware::Logger::default())
             .app_data(web::Data::new(app_state.clone()))
             .route("/api/search", web::post().to(search))
+            .route("/api/search/graph", web::post().to(search_graph))
             .route("/api/index", web::post().to(index))
             .route("/api/index/status", web::get().to(index_status))
             .route("/api/repo/info", web::get().to(repo_info))
