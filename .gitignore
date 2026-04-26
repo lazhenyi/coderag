@@ -1,8 +1,9 @@
 /target
 .env
-.env.example
 .coderag/
-.idea/
+.idea/**
 *.iml
 web/dist/
 web/node_modules/
+.claude
+Task.md
