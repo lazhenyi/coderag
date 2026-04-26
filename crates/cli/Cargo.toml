@@ -1,5 +1,4 @@
 [package]
-publish = false
 name = "coderag-cli"
 version.workspace = true
 edition.workspace = true
@@ -14,20 +13,20 @@ name = "coderag"
 path = "src/main.rs"
 
 [dependencies]
-coderag-core = { path = "../core" }
-coderag-storage = { path = "../storage" }
-coderag-indexer = { path = "../indexer" }
-coderag-server = { path = "../server" }
-tokio = { workspace = true, features = ["full"] }
-anyhow = { workspace = true }
+coderag-core = { version = "0.1", path = "../core" }
+coderag-storage = { version = "0.1", path = "../storage" }
+coderag-indexer = { version = "0.1", path = "../indexer" }
+coderag-server = { version = "0.1", path = "../server" }
+tokio.workspace = true
+anyhow.workspace = true
 clap = { version = "4", features = ["derive"] }
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
+tracing.workspace = true
+tracing-subscriber.workspace = true
 tracing-appender = "0.2"
-serde = { workspace = true }
-serde_json = { workspace = true }
-dotenvy = { workspace = true }
-dirs = { workspace = true }
+serde.workspace = true
+serde_json.workspace = true
+dotenvy.workspace = true
+dirs.workspace = true
 
 [dev-dependencies]
 tempfile = "3"

@@ -1,5 +1,4 @@
 [package]
-publish = false
 name = "coderag"
 version.workspace = true
 edition.workspace = true
@@ -15,9 +14,9 @@ homepage.workspace = true
 documentation.workspace = true
 
 [dependencies]
-coderag-core = { path = "../core" }
-coderag-storage = { path = "../storage" }
-coderag-indexer = { path = "../indexer" }
+coderag-core = { version = "0.1", path = "../core" }
+coderag-storage = { version = "0.1", path = "../storage" }
+coderag-indexer = { version = "0.1", path = "../indexer" }
 anyhow.workspace = true
 
 [dev-dependencies]

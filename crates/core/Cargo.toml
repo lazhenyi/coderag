@@ -1,5 +1,4 @@
 [package]
-publish = false
 name = "coderag-core"
 version.workspace = true
 edition.workspace = true

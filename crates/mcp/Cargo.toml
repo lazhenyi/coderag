@@ -1,31 +1,41 @@
 [package]
-publish = false
 name = "coderag-mcp"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 description = "MCP server for CodeRAG — AST-based code RAG system"
+repository.workspace = true
+homepage.workspace = true
 
 [[bin]]
 name = "coderag-mcp"
 path = "src/main.rs"
 
 [dependencies]
-coderag-core = { path = "../core" }
-coderag-storage = { path = "../storage" }
-coderag-indexer = { path = "../indexer" }
+serde.workspace = true
+serde_json.workspace = true
+schemars = "1.0"
+tokio.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+dotenvy.workspace = true
+dirs.workspace = true
+parking_lot = "0.12"
 
 rmcp = { version = "0.8", features = ["server", "macros", "transport-streamable-http-server"] }
 axum = "0.8"
 futures = "0.3"
-serde = { workspace = true }
-serde_json = { workspace = true }
-schemars = "1.0"
-tokio = { workspace = true, features = ["full"] }
-anyhow = { workspace = true }
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
-dotenvy = { workspace = true }
-dirs = { workspace = true }
-parking_lot = "0.12"
+
+[dependencies.coderag-core]
+version = "0.1"
+path = "../core"
+
+[dependencies.coderag-storage]
+version = "0.1"
+path = "../storage"
+
+[dependencies.coderag-indexer]
+version = "0.1"
+path = "../indexer"

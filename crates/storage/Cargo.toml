@@ -1,5 +1,4 @@
 [package]
-publish = false
 name = "coderag-storage"
 version.workspace = true
 edition.workspace = true
@@ -11,16 +10,16 @@ homepage.workspace = true
 documentation.workspace = true
 
 [dependencies]
-coderag-core = { path = "../core" }
-reqwest = { workspace = true }
-tokio = { workspace = true }
-anyhow = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-thiserror = { workspace = true }
-tracing = { workspace = true }
-parking_lot = { workspace = true }
-async-trait = { workspace = true }
+coderag-core = { version = "0.1", path = "../core" }
+reqwest.workspace = true
+tokio.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+parking_lot.workspace = true
+async-trait.workspace = true
 
 [dev-dependencies]
 tempfile = "3"
