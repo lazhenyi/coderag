@@ -37,6 +37,8 @@ pub struct IndexConfig {
     pub embed_model: Option<String>,
     /// Embedding dimension
     pub embed_dimension: Option<usize>,
+    /// Use local file storage instead of Qdrant
+    pub use_local_storage: bool,
 }
 
 impl Default for IndexConfig {
@@ -53,6 +55,7 @@ impl Default for IndexConfig {
             embed_api_key: None,
             embed_model: None,
             embed_dimension: None,
+            use_local_storage: false,
         }
     }
 }

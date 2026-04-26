@@ -12,7 +12,7 @@ use coderag_core::embedder::EmbedderConfig;
 use coderag_core::embedder::Embedding;
 use coderag_core::parser::Parser;
 use coderag_core::repo::{GitRepo, Oid};
-use coderag_storage::{QdrantClient, QdrantConfig, ChunkPayload, SearchFilter};
+use coderag_storage::{ChunkPayload, QdrantConfig, SearchFilter, StorageBackend, StorageConfig};
 use std::path::Path;
 use std::time::Instant;
 use tracing::{info, warn};
@@ -24,7 +24,7 @@ pub struct IncrementalIndexer {
     analyzer: Analyzer,
     chunker: Chunker,
     embedder: Option<Embedder>,
-    storage: Option<QdrantClient>,
+    storage: Option<StorageBackend>,
 }
 
 impl IncrementalIndexer {
@@ -36,7 +36,7 @@ impl IncrementalIndexer {
         let analyzer = Analyzer::new();
         let chunker = Chunker::new();
 
-        let embedder = if config.qdrant_url != "" {
+        let embedder = if config.qdrant_url != "" || config.use_local_storage {
             let embedder_config = EmbedderConfig {
                 api_url: config.embed_api_url.clone()
                     .unwrap_or_else(|| "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings".to_string()),
@@ -51,14 +51,19 @@ impl IncrementalIndexer {
             None
         };
 
-        let storage = if config.qdrant_url != "" {
+        let storage = if config.use_local_storage {
+            Some(StorageBackend::from_config(&StorageConfig::Local {
+                store_path: config.repo_path.clone(),
+                is_bare: false,
+            })?)
+        } else if config.qdrant_url != "" {
             let storage_config = QdrantConfig {
                 url: config.qdrant_url.clone(),
                 api_key: config.qdrant_api_key.clone(),
                 collection_name: config.collection_name.clone(),
                 ..Default::default()
             };
-            Some(QdrantClient::new(storage_config)?)
+            Some(StorageBackend::from_config(&StorageConfig::Qdrant(storage_config))?)
         } else {
             None
         };
@@ -157,7 +162,7 @@ impl IncrementalIndexer {
                 })
                 .collect();
 
-            if storage.upsert_points_batch(storage_batch).await.is_ok() {
+            if storage.upsert_batch(storage_batch).await.is_ok() {
                 stats.add_embeddings(chunks.len());
             }
         }

@@ -2,10 +2,12 @@
 //!
 //! Qdrant vector storage integration for CodeRAG.
 
-pub mod client;
+mod client;
+pub mod local;
 pub mod repository;
 
-pub use client::{QdrantClient, QdrantConfig, SearchResult, SearchOptions, ChunkPayload, SearchFilter};
+pub use client::{ChunkPayload, QdrantClient, QdrantConfig, SearchFilter, SearchOptions, SearchResult};
+pub use local::{LocalStore, VectorPoint, LocalSearchResult, StorageBackend, StorageConfig};
 pub use repository::ChunkRepository;
 
 /// Storage error types

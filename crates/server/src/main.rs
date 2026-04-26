@@ -7,6 +7,9 @@ use coderag_storage::{StorageBackend, StorageConfig, QdrantConfig, SearchFilter,
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 
+mod frontend;
+mod frontend_serve;
+
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -590,6 +593,7 @@ async fn main() -> std::io::Result<()> {
             .route("/health", web::get().to(|| async {
                 HttpResponse::Ok().json(serde_json::json!({"status": "ok"}))
             }))
+            .route("/{path:.*}", web::get().to(frontend_serve::serve_frontend))
     })
     .bind(&bind_addr)?
     .run()
