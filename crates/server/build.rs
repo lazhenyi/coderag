@@ -2,27 +2,6 @@ use std::env;
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
-use std::process::Command;
-
-fn run_npm(args: &[&str], cwd: &str) {
-    let mut cmd = if cfg!(target_os = "windows") {
-        let mut c = Command::new("cmd");
-        c.args(["/C", "npm"]);
-        c
-    } else {
-        Command::new("npm")
-    };
-
-    let status = cmd
-        .args(args)
-        .current_dir(cwd)
-        .status()
-        .expect("failed to run npm");
-
-    if !status.success() {
-        panic!("npm command failed: {:?}", args);
-    }
-}
 
 fn find_all_files(path: PathBuf) -> Vec<PathBuf> {
     let mut files = vec![];
@@ -69,8 +48,32 @@ fn main() {
     let project_root = manifest_dir.parent().unwrap().parent().unwrap();
     let web_dir = project_root.join("web");
 
-    println!("cargo:warning=Building frontend...");
-    run_npm(&["run", "build"], web_dir.to_str().unwrap());
+    let dist = web_dir.join("dist");
+    if !dist.is_dir() {
+        // Try to run npm build; if it fails (e.g., no npm in publish sandbox),
+        // we still need the dist directory to exist. Warn but don't panic so that
+        // `cargo package` / `cargo publish` can succeed when dist is pre-built.
+        match std::process::Command::new("npm")
+            .current_dir(&web_dir)
+            .arg("run")
+            .arg("build")
+            .output()
+        {
+            Ok(output) if output.status.success() => {
+                println!("cargo:warning=Frontend built successfully");
+            }
+            Ok(output) => {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                eprintln!("cargo:warning=npm build failed: {}", stderr);
+            }
+            Err(e) => {
+                eprintln!(
+                    "cargo:warning=npm not available, skipping frontend build: {}",
+                    e
+                );
+            }
+        }
+    }
 
     let dist = web_dir.join("dist");
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
