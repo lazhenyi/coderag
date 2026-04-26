@@ -4,3 +4,5 @@
 .coderag/
 .idea/
 *.iml
+web/dist/
+web/node_modules/

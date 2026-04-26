@@ -6,6 +6,7 @@ members = [
     "crates/indexer",
     "crates/cli",
     "crates/coderag",
+    "crates/server",
 ]
 
 [workspace.package]
