@@ -6,7 +6,7 @@ use coderag_indexer::{FullIndexer, IndexConfig};
 use coderag_storage::{StorageBackend, StorageConfig, QdrantConfig, SearchFilter, SearchOptions};
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -26,6 +26,7 @@ struct AppConfig {
     qdrant_url: String,
     qdrant_api_key: Option<String>,
     collection_name: String,
+    #[allow(dead_code)]
     state_file: String,
     batch_size: usize,
 }
@@ -65,6 +66,7 @@ fn default_score_threshold() -> f32 { 0.5 }
 #[derive(Deserialize)]
 struct IndexRequest {
     #[serde(default)]
+    #[allow(dead_code)]
     full: bool,
     #[serde(default = "default_branch")]
     branch: String,
