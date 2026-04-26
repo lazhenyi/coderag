@@ -7,6 +7,7 @@ use crate::IndexStats;
 use anyhow::{Context, Result as AnyResult};
 use coderag_core::analyzer::Analyzer;
 use coderag_core::chunker::{Chunk, Chunker};
+use coderag_core::document::{detect_doc_format, TextChunker};
 use coderag_core::embedder::Embedder;
 use coderag_core::embedder::EmbedderConfig;
 use coderag_core::embedder::Embedding;
@@ -23,6 +24,7 @@ pub struct FullIndexer {
     parser: Parser,
     analyzer: Analyzer,
     chunker: Chunker,
+    text_chunker: TextChunker,
     embedder: Option<Embedder>,
     storage: Option<QdrantClient>,
 }
@@ -35,6 +37,7 @@ impl FullIndexer {
 
         let analyzer = Analyzer::new();
         let chunker = Chunker::new();
+        let text_chunker = TextChunker::new();
 
         let embedder = if config.qdrant_url != "" {
             let embedder_config = EmbedderConfig {
@@ -68,6 +71,7 @@ impl FullIndexer {
             parser,
             analyzer,
             chunker,
+            text_chunker,
             embedder,
             storage,
         })
@@ -98,55 +102,62 @@ impl FullIndexer {
 
         info!("Found {} files to process", files.len());
 
-        // Process files sequentially
-        let symbols: Vec<_> = files
-            .iter()
-            .filter_map(|file| {
-                // Try to detect language
-                let path = Path::new(&file.path);
-                let language = self.parser.detect_language(path)?;
+        // Process files sequentially: try AST extraction first, then document parsing
+        let mut all_chunks: Vec<Chunk> = Vec::new();
 
-                // Read file content
-                let content = match repo.read_blob(file.blob_id.inner()) {
-                    Ok(c) => c,
-                    Err(e) => {
-                        warn!("Failed to read {}: {}", file.path, e);
-                        return None;
-                    }
-                };
+        for file in &files {
+            let path = Path::new(&file.path);
+            let content = match repo.read_blob(file.blob_id.inner()) {
+                Ok(c) => c,
+                Err(e) => {
+                    warn!("Failed to read {}: {}", file.path, e);
+                    continue;
+                }
+            };
 
-                // Parse
+            // Try AST-based symbol extraction first
+            if let Some(language) = self.parser.detect_language(path) {
                 let parse_result = match self.parser.parse_with_language(&content, language.clone()) {
                     Ok(r) => r,
                     Err(e) => {
                         warn!("Failed to parse {}: {}", file.path, e);
-                        return None;
+                        continue;
                     }
                 };
 
-                // Extract symbols
                 let file_symbols = self.analyzer.extract_symbols(
                     &content,
                     &parse_result.tree,
                     &language,
                     &file.path,
                 );
+                let chunks = self.chunker.chunk_symbols(
+                    &file_symbols,
+                    &self.config.repo_path,
+                    &self.config.branch,
+                    &head.oid.to_string(),
+                );
+                all_chunks.extend(chunks);
+                continue;
+            }
 
-                Some(file_symbols)
-            })
-            .flatten()
-            .collect();
+            // Fall back to document parsing
+            let doc_format = detect_doc_format(path);
+            if doc_format.is_supported() {
+                if let Some(chunks) = self.text_chunker.process_file(
+                    path,
+                    &content,
+                    doc_format,
+                    &self.config.repo_path,
+                    &self.config.branch,
+                    &head.oid.to_string(),
+                ) {
+                    all_chunks.extend(chunks);
+                }
+            }
+        }
 
-        stats.add_symbols(symbols.len());
-        info!("Extracted {} symbols", stats.symbols_extracted);
-
-        // Create chunks
-        let chunks: Vec<Chunk> = self.chunker.chunk_symbols(
-            &symbols,
-            &self.config.repo_path,
-            &self.config.branch,
-            &head.oid.to_string(),
-        );
+        let chunks = all_chunks;
 
         stats.add_chunks(chunks.len());
         info!("Created {} chunks", stats.chunks_created);

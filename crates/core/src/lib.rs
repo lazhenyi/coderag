@@ -9,5 +9,6 @@ pub mod analyzer;
 pub mod chunker;
 pub mod embedder;
 pub mod error;
+pub mod document;
 
 pub use error::{Error, Result};
