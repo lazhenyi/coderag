@@ -52,38 +52,31 @@ pub fn extract_zip(_data: &[u8]) -> Option<Vec<ArchiveEntry>> {
 pub fn extract_tar(_data: &[u8]) -> Option<Vec<ArchiveEntry>> {
     #[cfg(feature = "doc-p2")]
     {
-        use std::io::Cursor;
-        match tar::Archive::new(Cursor::new(_data)) {
-            Ok(mut archive) => {
-                let mut entries = Vec::new();
-                if let Ok(entries_iter) = archive.entries() {
-                    for entry_result in entries_iter {
-                        if let Ok(mut entry) = entry_result {
-                            if entry.header().entry_type() == tar::EntryType::Regular {
-                                if let Ok(path) = entry.path() {
-                                    let path_str = path.to_string_lossy().to_string();
-                                    let mut content = Vec::new();
-                                    if entry.read_to_end(&mut content).is_ok() {
-                                        entries.push(ArchiveEntry {
-                                            path: path_str,
-                                            content,
-                                        });
-                                    }
-                                }
+        use std::io::{Cursor, Read};
+        let mut archive = tar::Archive::new(Cursor::new(_data));
+        let mut entries = Vec::new();
+        if let Ok(entries_iter) = archive.entries() {
+            for entry_result in entries_iter {
+                if let Ok(mut entry) = entry_result {
+                    if entry.header().entry_type() == tar::EntryType::Regular {
+                        if let Ok(path) = entry.path() {
+                            let path_str = path.to_string_lossy().to_string();
+                            let mut content = Vec::new();
+                            if entry.read_to_end(&mut content).is_ok() {
+                                entries.push(ArchiveEntry {
+                                    path: path_str,
+                                    content,
+                                });
                             }
                         }
                     }
                 }
-                if entries.is_empty() {
-                    None
-                } else {
-                    Some(entries)
-                }
             }
-            Err(e) => {
-                warn!("Failed to open TAR: {}", e);
-                None
-            }
+        }
+        if entries.is_empty() {
+            None
+        } else {
+            Some(entries)
         }
     }
     #[cfg(not(feature = "doc-p2"))]
