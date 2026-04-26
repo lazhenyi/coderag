@@ -2,15 +2,15 @@
 //!
 //! Orchestrates the indexing pipeline for code repositories.
 
+mod eval;
 mod full;
 mod incremental;
 mod state;
-mod eval;
 
+pub use eval::{EvalMetrics, default_queries, evaluate, print_report};
 pub use full::FullIndexer;
 pub use incremental::IncrementalIndexer;
 pub use state::{IndexerState, StateManager};
-pub use eval::{evaluate, default_queries, print_report, EvalMetrics};
 
 /// Indexer configuration
 #[derive(Debug, Clone)]

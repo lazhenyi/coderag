@@ -3,7 +3,7 @@
 use crate::config::Config;
 use anyhow::{Context, Result as AnyResult};
 use coderag_core::repo::GitRepo;
-use coderag_indexer::{evaluate, default_queries, print_report};
+use coderag_indexer::{default_queries, evaluate, print_report};
 use coderag_storage::{QdrantClient, QdrantConfig};
 
 pub fn show_info(repo_path: &str, show_tree: bool) -> AnyResult<()> {
@@ -72,7 +72,9 @@ pub async fn eval_quality(
     let storage_config = QdrantConfig {
         url: qdrant_url.clone(),
         api_key: config.qdrant_api_key.clone(),
-        collection_name: config.collection_name.clone()
+        collection_name: config
+            .collection_name
+            .clone()
             .unwrap_or_else(|| "coderag".to_string()),
         ..Default::default()
     };
@@ -87,9 +89,12 @@ pub async fn eval_quality(
     }
 
     let embedder_config = coderag_core::embedder::EmbedderConfig {
-        api_url: config.embed_url.clone()
-            .unwrap_or_else(|| "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings".to_string()),
-        model: config.embed_model.clone()
+        api_url: config.embed_url.clone().unwrap_or_else(|| {
+            "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings".to_string()
+        }),
+        model: config
+            .embed_model
+            .clone()
             .unwrap_or_else(|| "text-embedding-v4".to_string()),
         dimension: config.embed_dimension.unwrap_or(1024),
         api_key: openai_api_key,
@@ -102,7 +107,8 @@ pub async fn eval_quality(
     let all_queries = default_queries();
     let queries: Vec<_> = if let Some(lang) = language {
         let lang_lower = lang.to_lowercase();
-        all_queries.into_iter()
+        all_queries
+            .into_iter()
             .filter(|q| q.language.to_lowercase() == lang_lower)
             .collect()
     } else {
@@ -121,9 +127,15 @@ pub async fn eval_quality(
 
     println!();
     println!("To improve results:");
-    println!("  1. Index your repository: coderag index --repo {} --full", repo_path);
+    println!(
+        "  1. Index your repository: coderag index --repo {} --full",
+        repo_path
+    );
     println!("  2. Use a real OpenAI API key (export OPENAI_API_KEY=...)");
-    println!("  3. Run: coderag eval --repo {} --language <lang>", repo_path);
+    println!(
+        "  3. Run: coderag eval --repo {} --language <lang>",
+        repo_path
+    );
 
     Ok(())
 }

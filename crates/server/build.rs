@@ -149,11 +149,7 @@ fn main() {
         {},
         {},
     ),"#,
-            key_literal,
-            safe_name,
-            etag_literal,
-            gz_literal,
-            br_literal
+            key_literal, safe_name, etag_literal, gz_literal, br_literal
         ));
     }
 

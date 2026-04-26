@@ -100,7 +100,8 @@ pub fn config_set(key: &str, value: &str) -> AnyResult<()> {
         serde_json::from_str(EXAMPLE_SETTINGS_JSON)?
     };
 
-    let obj = json.as_object_mut()
+    let obj = json
+        .as_object_mut()
         .context("Config file is not a JSON object")?;
 
     match key {
@@ -114,12 +115,14 @@ pub fn config_set(key: &str, value: &str) -> AnyResult<()> {
         "repo_path" | "repoPath" => obj.insert("repoPath".into(), value.into()),
         "branch" => obj.insert("branch".into(), value.into()),
         "batch_size" | "batchSize" => {
-            value.parse::<usize>()
+            value
+                .parse::<usize>()
                 .with_context(|| format!("batch_size must be a number, got: {}", value))?;
             obj.insert("batchSize".into(), value.into())
         }
         "embed_dimension" | "embedDimension" => {
-            value.parse::<usize>()
+            value
+                .parse::<usize>()
                 .with_context(|| format!("embed_dimension must be a number, got: {}", value))?;
             obj.insert("embedDimension".into(), value.into())
         }
@@ -133,8 +136,7 @@ pub fn config_set(key: &str, value: &str) -> AnyResult<()> {
         }
     };
 
-    let formatted = serde_json::to_string_pretty(&json)
-        .context("Failed to serialize config")?;
+    let formatted = serde_json::to_string_pretty(&json).context("Failed to serialize config")?;
 
     fs::write(&path, formatted)
         .with_context(|| format!("Failed to write config: {}", path.display()))?;

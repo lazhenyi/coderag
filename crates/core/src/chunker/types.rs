@@ -32,7 +32,11 @@ pub struct ChunkConfig {
 
 impl Default for ChunkConfig {
     fn default() -> Self {
-        Self { max_chunk_size: 2000, include_docs: true, include_signatures: true }
+        Self {
+            max_chunk_size: 2000,
+            include_docs: true,
+            include_signatures: true,
+        }
     }
 }
 
@@ -40,9 +44,13 @@ impl Default for ChunkConfig {
 pub fn chunk_to_embedding_text(chunk: &Chunk) -> String {
     let mut parts = Vec::new();
     parts.push(format!("[{}] ", chunk.language));
-    if !chunk.signature.is_empty() { parts.push(chunk.signature.clone()); }
+    if !chunk.signature.is_empty() {
+        parts.push(chunk.signature.clone());
+    }
     if let Some(ref doc) = chunk.doc {
-        if !doc.is_empty() { parts.push(doc.clone()); }
+        if !doc.is_empty() {
+            parts.push(doc.clone());
+        }
     }
     parts.push(chunk.code.clone());
     parts.join("\n")

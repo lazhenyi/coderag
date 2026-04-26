@@ -1,6 +1,8 @@
 //! Unified storage backend supporting both Qdrant and local file storage
 
-use super::super::client::{QdrantClient, QdrantConfig, SearchOptions, SearchFilter, SearchResult, ChunkPayload};
+use super::super::client::{
+    ChunkPayload, QdrantClient, QdrantConfig, SearchFilter, SearchOptions, SearchResult,
+};
 use super::store::LocalStore;
 use super::types::VectorPoint;
 use anyhow::{Context, Result as AnyResult};
@@ -9,10 +11,7 @@ use anyhow::{Context, Result as AnyResult};
 #[derive(Debug, Clone)]
 pub enum StorageConfig {
     Qdrant(QdrantConfig),
-    Local {
-        store_path: String,
-        is_bare: bool,
-    },
+    Local { store_path: String, is_bare: bool },
 }
 
 /// Unified storage backend
@@ -29,7 +28,10 @@ impl StorageBackend {
                 let client = QdrantClient::new(qdrant_config.clone())?;
                 Ok(Self::Qdrant(client))
             }
-            StorageConfig::Local { store_path, is_bare } => {
+            StorageConfig::Local {
+                store_path,
+                is_bare,
+            } => {
                 let store = LocalStore::for_repo(store_path, *is_bare)?;
                 Ok(Self::Local(store))
             }
@@ -43,12 +45,20 @@ impl StorageBackend {
     }
 
     /// Upsert multiple points
-    pub async fn upsert_batch(&self, points: Vec<(String, Vec<f32>, ChunkPayload)>) -> AnyResult<()> {
+    pub async fn upsert_batch(
+        &self,
+        points: Vec<(String, Vec<f32>, ChunkPayload)>,
+    ) -> AnyResult<()> {
         match self {
             Self::Qdrant(client) => client.upsert_points_batch(points).await,
             Self::Local(store) => {
-                let vector_points: Vec<VectorPoint> = points.into_iter()
-                    .map(|(id, vector, payload)| VectorPoint { id, vector, payload })
+                let vector_points: Vec<VectorPoint> = points
+                    .into_iter()
+                    .map(|(id, vector, payload)| VectorPoint {
+                        id,
+                        vector,
+                        payload,
+                    })
                     .collect();
                 store.upsert_batch(vector_points)
             }
@@ -56,16 +66,23 @@ impl StorageBackend {
     }
 
     /// Search for similar vectors
-    pub async fn search(&self, vector: &[f32], options: SearchOptions) -> AnyResult<Vec<SearchResult>> {
+    pub async fn search(
+        &self,
+        vector: &[f32],
+        options: SearchOptions,
+    ) -> AnyResult<Vec<SearchResult>> {
         match self {
             Self::Qdrant(client) => client.search(vector, options).await,
             Self::Local(store) => {
                 let results = store.search(vector, options)?;
-                Ok(results.into_iter().map(|r| SearchResult {
-                    id: r.id,
-                    score: r.score,
-                    payload: r.payload,
-                }).collect())
+                Ok(results
+                    .into_iter()
+                    .map(|r| SearchResult {
+                        id: r.id,
+                        score: r.score,
+                        payload: r.payload,
+                    })
+                    .collect())
             }
         }
     }

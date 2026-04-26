@@ -1,7 +1,7 @@
 //! Local vector store types
 
-use serde::{Deserialize, Serialize};
 use super::super::client::ChunkPayload;
+use serde::{Deserialize, Serialize};
 
 /// A single vector point with its embedding and metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]

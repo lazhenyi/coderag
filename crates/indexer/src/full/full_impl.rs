@@ -5,11 +5,11 @@ use crate::{IndexConfig, IndexStats};
 use anyhow::{Context, Result as AnyResult};
 use coderag_core::analyzer::Analyzer;
 use coderag_core::chunker::{Chunk, Chunker};
-use coderag_core::document::{detect_doc_format, TextChunker};
+use coderag_core::document::{TextChunker, detect_doc_format};
 use coderag_core::embedder::{Embedder, EmbedderConfig};
 use coderag_core::parser::Parser;
 use coderag_core::repo::GitRepo;
-use coderag_storage::{ChunkPayload, StorageBackend, StorageConfig, QdrantConfig};
+use coderag_storage::{ChunkPayload, QdrantConfig, StorageBackend, StorageConfig};
 use std::path::Path;
 use std::time::Instant;
 use tracing::{info, warn};
@@ -24,9 +24,12 @@ impl FullIndexer {
 
         let embedder = if config.qdrant_url != "" || config.use_local_storage {
             let embedder_config = EmbedderConfig {
-                api_url: config.embed_api_url.clone()
-                    .unwrap_or_else(|| "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings".to_string()),
-                model: config.embed_model.clone()
+                api_url: config.embed_api_url.clone().unwrap_or_else(|| {
+                    "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings".to_string()
+                }),
+                model: config
+                    .embed_model
+                    .clone()
                     .unwrap_or_else(|| "text-embedding-v4".to_string()),
                 dimension: config.embed_dimension.unwrap_or(1024),
                 api_key: config.embed_api_key.clone(),
@@ -49,7 +52,9 @@ impl FullIndexer {
                 collection_name: config.collection_name.clone(),
                 ..Default::default()
             };
-            Some(StorageBackend::from_config(&StorageConfig::Qdrant(storage_config))?)
+            Some(StorageBackend::from_config(&StorageConfig::Qdrant(
+                storage_config,
+            ))?)
         } else {
             None
         };
@@ -70,15 +75,19 @@ impl FullIndexer {
         let start = Instant::now();
         let mut stats = IndexStats::new();
 
-        info!("Starting full index for repository: {}", self.config.repo_path);
+        info!(
+            "Starting full index for repository: {}",
+            self.config.repo_path
+        );
 
-        let repo = GitRepo::open(&self.config.repo_path)
-            .context("Failed to open repository")?;
+        let repo = GitRepo::open(&self.config.repo_path).context("Failed to open repository")?;
 
         let head = repo.head_commit().context("Failed to get HEAD commit")?;
         info!("Indexing commit: {}", head.oid);
 
-        let tree = repo.commit_to_tree(head.oid.inner()).context("Failed to get commit tree")?;
+        let tree = repo
+            .commit_to_tree(head.oid.inner())
+            .context("Failed to get commit tree")?;
         let files = repo.walk_tree(&tree).context("Failed to walk tree")?;
         info!("Found {} files to process", files.len());
 
@@ -95,7 +104,8 @@ impl FullIndexer {
             };
 
             if let Some(language) = self.parser.detect_language(path) {
-                let parse_result = match self.parser.parse_with_language(&content, language.clone()) {
+                let parse_result = match self.parser.parse_with_language(&content, language.clone())
+                {
                     Ok(r) => r,
                     Err(e) => {
                         warn!("Failed to parse {}: {}", file.path, e);
@@ -104,10 +114,16 @@ impl FullIndexer {
                 };
 
                 let file_symbols = self.analyzer.extract_symbols(
-                    &content, &parse_result.tree, &language, &file.path,
+                    &content,
+                    &parse_result.tree,
+                    &language,
+                    &file.path,
                 );
                 let chunks = self.chunker.chunk_symbols(
-                    &file_symbols, &self.config.repo_path, &self.config.branch, &head.oid.to_string(),
+                    &file_symbols,
+                    &self.config.repo_path,
+                    &self.config.branch,
+                    &head.oid.to_string(),
                 );
                 all_chunks.extend(chunks);
                 continue;
@@ -116,7 +132,12 @@ impl FullIndexer {
             let doc_format = detect_doc_format(path);
             if doc_format.is_supported() {
                 if let Some(chunks) = self.text_chunker.process_file(
-                    path, &content, doc_format, &self.config.repo_path, &self.config.branch, &head.oid.to_string(),
+                    path,
+                    &content,
+                    doc_format,
+                    &self.config.repo_path,
+                    &self.config.branch,
+                    &head.oid.to_string(),
                 ) {
                     all_chunks.extend(chunks);
                 }
@@ -134,26 +155,30 @@ impl FullIndexer {
             for chunk_batch in chunks.chunks(batch_size) {
                 let embeddings: Vec<_> = embedder.embed_chunks(chunk_batch).await?;
 
-                let storage_batch: Vec<_> = chunk_batch.iter().zip(embeddings.iter()).map(|(chunk, embedding)| {
-                    let payload = ChunkPayload {
-                        id: chunk.id.clone(),
-                        content_hash: chunk.content_hash.clone(),
-                        repo: chunk.repo.clone(),
-                        branch: chunk.branch.clone(),
-                        commit: chunk.commit.clone(),
-                        language: chunk.language.clone(),
-                        file: chunk.file.clone(),
-                        module: chunk.module.clone(),
-                        symbol: chunk.symbol.clone(),
-                        kind: chunk.kind.clone(),
-                        signature: chunk.signature.clone(),
-                        doc: chunk.doc.clone(),
-                        code: chunk.code.clone(),
-                        start_line: chunk.start_line,
-                        end_line: chunk.end_line,
-                    };
-                    (chunk.id.clone(), embedding.vector.clone(), payload)
-                }).collect();
+                let storage_batch: Vec<_> = chunk_batch
+                    .iter()
+                    .zip(embeddings.iter())
+                    .map(|(chunk, embedding)| {
+                        let payload = ChunkPayload {
+                            id: chunk.id.clone(),
+                            content_hash: chunk.content_hash.clone(),
+                            repo: chunk.repo.clone(),
+                            branch: chunk.branch.clone(),
+                            commit: chunk.commit.clone(),
+                            language: chunk.language.clone(),
+                            file: chunk.file.clone(),
+                            module: chunk.module.clone(),
+                            symbol: chunk.symbol.clone(),
+                            kind: chunk.kind.clone(),
+                            signature: chunk.signature.clone(),
+                            doc: chunk.doc.clone(),
+                            code: chunk.code.clone(),
+                            start_line: chunk.start_line,
+                            end_line: chunk.end_line,
+                        };
+                        (chunk.id.clone(), embedding.vector.clone(), payload)
+                    })
+                    .collect();
 
                 if storage.upsert_batch(storage_batch).await.is_ok() {
                     stats.add_embeddings(chunk_batch.len());
@@ -176,31 +201,44 @@ impl FullIndexer {
         let tree = repo.commit_to_tree(head.oid.inner())?;
         let files = repo.walk_tree(&tree)?;
 
-        let symbols: Vec<_> = files.iter().filter_map(|file| {
-            let path = Path::new(&file.path);
-            let language = self.parser.detect_language(path)?;
+        let symbols: Vec<_> = files
+            .iter()
+            .filter_map(|file| {
+                let path = Path::new(&file.path);
+                let language = self.parser.detect_language(path)?;
 
-            let content = match repo.read_blob(file.blob_id.inner()) {
-                Ok(c) => c,
-                Err(e) => {
-                    warn!("Failed to read {}: {}", file.path, e);
-                    return None;
-                }
-            };
+                let content = match repo.read_blob(file.blob_id.inner()) {
+                    Ok(c) => c,
+                    Err(e) => {
+                        warn!("Failed to read {}: {}", file.path, e);
+                        return None;
+                    }
+                };
 
-            let parse_result = match self.parser.parse_with_language(&content, language.clone()) {
-                Ok(r) => r,
-                Err(e) => {
-                    warn!("Failed to parse {}: {}", file.path, e);
-                    return None;
-                }
-            };
+                let parse_result = match self.parser.parse_with_language(&content, language.clone())
+                {
+                    Ok(r) => r,
+                    Err(e) => {
+                        warn!("Failed to parse {}: {}", file.path, e);
+                        return None;
+                    }
+                };
 
-            Some(self.analyzer.extract_symbols(&content, &parse_result.tree, &language, &file.path))
-        }).flatten().collect();
+                Some(self.analyzer.extract_symbols(
+                    &content,
+                    &parse_result.tree,
+                    &language,
+                    &file.path,
+                ))
+            })
+            .flatten()
+            .collect();
 
         let chunks = self.chunker.chunk_symbols(
-            &symbols, &self.config.repo_path, &self.config.branch, &head.oid.to_string(),
+            &symbols,
+            &self.config.repo_path,
+            &self.config.branch,
+            &head.oid.to_string(),
         );
 
         Ok(chunks)

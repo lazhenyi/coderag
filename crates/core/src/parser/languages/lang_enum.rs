@@ -5,9 +5,28 @@ use crate::parser::registry::CommentStyle;
 /// Supported programming languages
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Language {
-    Rust, Python, JavaScript, TypeScript, Java, Go,
-    C, Cpp, CSharp, Swift, Kotlin, Php, Ruby,
-    Scala, Dart, Lua, R, Perl, Shell, Sql, Markdown, Unknown,
+    Rust,
+    Python,
+    JavaScript,
+    TypeScript,
+    Java,
+    Go,
+    C,
+    Cpp,
+    CSharp,
+    Swift,
+    Kotlin,
+    Php,
+    Ruby,
+    Scala,
+    Dart,
+    Lua,
+    R,
+    Perl,
+    Shell,
+    Sql,
+    Markdown,
+    Unknown,
 }
 
 impl std::fmt::Display for Language {

@@ -6,8 +6,10 @@ mod client;
 pub mod local;
 pub mod repository;
 
-pub use client::{ChunkPayload, QdrantClient, QdrantConfig, SearchFilter, SearchOptions, SearchResult};
-pub use local::{LocalStore, VectorPoint, LocalSearchResult, StorageBackend, StorageConfig};
+pub use client::{
+    ChunkPayload, QdrantClient, QdrantConfig, SearchFilter, SearchOptions, SearchResult,
+};
+pub use local::{LocalSearchResult, LocalStore, StorageBackend, StorageConfig, VectorPoint};
 pub use repository::ChunkRepository;
 
 /// Storage error types

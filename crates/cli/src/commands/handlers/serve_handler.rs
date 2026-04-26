@@ -66,13 +66,18 @@ pub fn serve_api(bind: &str, config: &Config) -> AnyResult<()> {
 
 fn which_coderag_server() -> AnyResult<std::path::PathBuf> {
     // Prefer the sibling binary from the same workspace build
-    let current_exe = std::env::current_exe()
-        .context("Cannot determine current executable path")?;
+    let current_exe =
+        std::env::current_exe().context("Cannot determine current executable path")?;
 
-    let server_name = if cfg!(windows) { "coderag-server.exe" } else { "coderag-server" };
+    let server_name = if cfg!(windows) {
+        "coderag-server.exe"
+    } else {
+        "coderag-server"
+    };
 
     // Check same directory as this CLI binary
-    let sibling = current_exe.parent()
+    let sibling = current_exe
+        .parent()
         .map(|p| p.join(server_name))
         .filter(|p| p.exists());
 
@@ -84,7 +89,11 @@ fn which_coderag_server() -> AnyResult<std::path::PathBuf> {
     if let Ok(cargo_manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
         let manifest_dir = std::path::PathBuf::from(cargo_manifest_dir);
         if let Some(project_root) = manifest_dir.parent().and_then(|p| p.parent()) {
-            let profile = if cfg!(debug_assertions) { "debug" } else { "release" };
+            let profile = if cfg!(debug_assertions) {
+                "debug"
+            } else {
+                "release"
+            };
             let target = project_root.join("target").join(profile).join(server_name);
             if target.exists() {
                 return Ok(target);

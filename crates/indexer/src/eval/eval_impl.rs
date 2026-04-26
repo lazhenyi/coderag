@@ -1,10 +1,10 @@
 //! Evaluation implementation
 
-use super::types::{EvalQuery, EvalResult, EvalMetrics, LanguageMetrics};
+use super::types::{EvalMetrics, EvalQuery, EvalResult, LanguageMetrics};
 use anyhow::Result as AnyResult;
 use coderag_core::chunker::Chunk;
 use coderag_core::embedder::Embedder;
-use coderag_storage::{QdrantClient, SearchOptions, SearchFilter};
+use coderag_storage::{QdrantClient, SearchFilter, SearchOptions};
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -26,7 +26,11 @@ pub fn default_queries() -> Vec<EvalQuery> {
         EvalQuery {
             language: "rust".to_string(),
             query_text: "trait for sorting algorithm implementations".to_string(),
-            expected_symbols: vec!["Sort".to_string(), "Sorter".to_string(), "Sortable".to_string()],
+            expected_symbols: vec![
+                "Sort".to_string(),
+                "Sorter".to_string(),
+                "Sortable".to_string(),
+            ],
             expected_files: vec![],
         },
         EvalQuery {
@@ -50,7 +54,11 @@ pub fn default_queries() -> Vec<EvalQuery> {
         EvalQuery {
             language: "javascript".to_string(),
             query_text: "function that fetches data from an API endpoint".to_string(),
-            expected_symbols: vec!["fetchData".to_string(), "getData".to_string(), "fetch".to_string()],
+            expected_symbols: vec![
+                "fetchData".to_string(),
+                "getData".to_string(),
+                "fetch".to_string(),
+            ],
             expected_files: vec![],
         },
         EvalQuery {
@@ -80,7 +88,11 @@ pub fn default_queries() -> Vec<EvalQuery> {
         EvalQuery {
             language: "go".to_string(),
             query_text: "interface for data persistence layer".to_string(),
-            expected_symbols: vec!["Store".to_string(), "Repository".to_string(), "Storage".to_string()],
+            expected_symbols: vec![
+                "Store".to_string(),
+                "Repository".to_string(),
+                "Storage".to_string(),
+            ],
             expected_files: vec![],
         },
     ]
@@ -141,15 +153,34 @@ pub async fn evaluate(
 
         let search_results = storage.search(&embedding.vector, options).await?;
 
-        let top5_symbols: Vec<String> = search_results.iter().map(|r| r.payload.symbol.clone()).collect();
-        let top1_hit = top5_symbols.first()
-            .map(|s| query.expected_symbols.iter().any(|e| s.contains(e) || e.contains(s)))
+        let top5_symbols: Vec<String> = search_results
+            .iter()
+            .map(|r| r.payload.symbol.clone())
+            .collect();
+        let top1_hit = top5_symbols
+            .first()
+            .map(|s| {
+                query
+                    .expected_symbols
+                    .iter()
+                    .any(|e| s.contains(e) || e.contains(s))
+            })
             .unwrap_or(false);
-        let top5_hit = top5_symbols.iter()
-            .any(|s| query.expected_symbols.iter().any(|e| s.contains(e) || e.contains(s)));
+        let top5_hit = top5_symbols.iter().any(|s| {
+            query
+                .expected_symbols
+                .iter()
+                .any(|e| s.contains(e) || e.contains(s))
+        });
 
-        let reciprocal_rank = top5_symbols.iter()
-            .position(|s| query.expected_symbols.iter().any(|e| s.contains(e) || e.contains(s)))
+        let reciprocal_rank = top5_symbols
+            .iter()
+            .position(|s| {
+                query
+                    .expected_symbols
+                    .iter()
+                    .any(|e| s.contains(e) || e.contains(s))
+            })
             .map(|pos| 1.0 / (pos as f64 + 1.0))
             .unwrap_or(0.0);
 
@@ -179,22 +210,40 @@ pub async fn evaluate(
     }
 
     let metrics = EvalMetrics {
-        top1_accuracy: if total > 0 { top1_count as f64 / total as f64 } else { 0.0 },
-        top5_accuracy: if total > 0 { top5_count as f64 / total as f64 } else { 0.0 },
-        mrr: if total > 0 { mrr_sum / total as f64 } else { 0.0 },
+        top1_accuracy: if total > 0 {
+            top1_count as f64 / total as f64
+        } else {
+            0.0
+        },
+        top5_accuracy: if total > 0 {
+            top5_count as f64 / total as f64
+        } else {
+            0.0
+        },
+        mrr: if total > 0 {
+            mrr_sum / total as f64
+        } else {
+            0.0
+        },
         total_queries: total,
-        per_language: per_language.iter().map(|(lang, r)| {
-            let t = r.len();
-            let t1 = r.iter().filter(|r| r.top1_hit).count();
-            let t5 = r.iter().filter(|r| r.top5_hit).count();
-            let mrr = r.iter().map(|r| r.reciprocal_rank).sum::<f64>() / t as f64;
-            (lang.clone(), LanguageMetrics {
-                top1_accuracy: t1 as f64 / t as f64,
-                top5_accuracy: t5 as f64 / t as f64,
-                mrr,
-                total_queries: t,
+        per_language: per_language
+            .iter()
+            .map(|(lang, r)| {
+                let t = r.len();
+                let t1 = r.iter().filter(|r| r.top1_hit).count();
+                let t5 = r.iter().filter(|r| r.top5_hit).count();
+                let mrr = r.iter().map(|r| r.reciprocal_rank).sum::<f64>() / t as f64;
+                (
+                    lang.clone(),
+                    LanguageMetrics {
+                        top1_accuracy: t1 as f64 / t as f64,
+                        top5_accuracy: t5 as f64 / t as f64,
+                        mrr,
+                        total_queries: t,
+                    },
+                )
             })
-        }).collect(),
+            .collect(),
     };
 
     Ok(metrics)
@@ -206,8 +255,14 @@ pub fn print_report(metrics: &EvalMetrics) {
     println!("  QUALITY EVALUATION REPORT");
     println!("{}", "=".repeat(60));
     println!();
-    println!("  Overall Top1 Accuracy: {:.1}%", metrics.top1_accuracy * 100.0);
-    println!("  Overall Top5 Accuracy: {:.1}%", metrics.top5_accuracy * 100.0);
+    println!(
+        "  Overall Top1 Accuracy: {:.1}%",
+        metrics.top1_accuracy * 100.0
+    );
+    println!(
+        "  Overall Top5 Accuracy: {:.1}%",
+        metrics.top5_accuracy * 100.0
+    );
     println!("  Mean Reciprocal Rank:  {:.3}", metrics.mrr);
     println!("  Total Queries:         {}", metrics.total_queries);
     println!();

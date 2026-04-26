@@ -14,7 +14,10 @@ pub struct Embedder {
 impl Embedder {
     pub fn new(config: EmbedderConfig) -> AnyResult<Self> {
         let client = EmbedderClient::new(config)?;
-        Ok(Self { client, batch_size: 100 })
+        Ok(Self {
+            client,
+            batch_size: 100,
+        })
     }
 
     pub fn with_batch_size(config: EmbedderConfig, batch_size: usize) -> AnyResult<Self> {

@@ -2,8 +2,8 @@
 //!
 //! Manages registration and lookup of supported programming languages.
 
-mod types;
 mod registry_impl;
+mod types;
 
-pub use types::{CommentStyle, LanguageConfig};
 pub use registry_impl::LanguageRegistry;
+pub use types::{CommentStyle, LanguageConfig};

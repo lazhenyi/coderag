@@ -6,36 +6,58 @@
 /// Extract text from .docx with structure awareness
 pub fn extract_docx(content: &[u8]) -> Option<String> {
     #[cfg(feature = "doc-p1")]
-    { extract_ooxml(content, "word/document.xml", OoxmlType::Docx) }
+    {
+        extract_ooxml(content, "word/document.xml", OoxmlType::Docx)
+    }
     #[cfg(not(feature = "doc-p1"))]
-    { let _ = content; None }
+    {
+        let _ = content;
+        None
+    }
 }
 
 /// Extract text from .odt with structure awareness
 pub fn extract_odt(content: &[u8]) -> Option<String> {
     #[cfg(feature = "doc-p1")]
-    { extract_ooxml(content, "content.xml", OoxmlType::Odt) }
+    {
+        extract_ooxml(content, "content.xml", OoxmlType::Odt)
+    }
     #[cfg(not(feature = "doc-p1"))]
-    { let _ = content; None }
+    {
+        let _ = content;
+        None
+    }
 }
 
 /// Extract text from .ods (spreadsheet — simpler table format)
 pub fn extract_ods(content: &[u8]) -> Option<String> {
     #[cfg(feature = "doc-p1")]
-    { extract_ooxml(content, "content.xml", OoxmlType::Ods) }
+    {
+        extract_ooxml(content, "content.xml", OoxmlType::Ods)
+    }
     #[cfg(not(feature = "doc-p1"))]
-    { let _ = content; None }
+    {
+        let _ = content;
+        None
+    }
 }
 
 #[cfg(feature = "doc-p1")]
-enum OoxmlType { Docx, Odt, Ods }
+enum OoxmlType {
+    Docx,
+    Odt,
+    Ods,
+}
 
 #[cfg(feature = "doc-p1")]
 fn extract_ooxml(zip_data: &[u8], xml_path: &str, kind: OoxmlType) -> Option<String> {
     use std::io::{Cursor, Read};
     let mut archive = match zip::ZipArchive::new(Cursor::new(zip_data)) {
         Ok(a) => a,
-        Err(e) => { tracing::warn!("Failed to open OOXML ZIP: {}", e); return None; }
+        Err(e) => {
+            tracing::warn!("Failed to open OOXML ZIP: {}", e);
+            return None;
+        }
     };
     let mut xml_content = String::new();
     match archive.by_name(xml_path) {
@@ -70,7 +92,8 @@ fn xml_text_content(xml: &str) -> String {
             _ => {}
         }
     }
-    result.replace("&nbsp;", " ")
+    result
+        .replace("&nbsp;", " ")
         .replace("&amp;", "&")
         .replace("&lt;", "<")
         .replace("&gt;", ">")
@@ -121,12 +144,20 @@ fn parse_docx_xml(xml: &str) -> Option<String> {
                     }
                 }
                 pos += p_end;
-            } else { break; }
-        } else { break; }
+            } else {
+                break;
+            }
+        } else {
+            break;
+        }
     }
 
     let trimmed = result.trim().to_string();
-    if trimmed.is_empty() { None } else { Some(trimmed) }
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed)
+    }
 }
 
 #[cfg(feature = "doc-p1")]
@@ -144,18 +175,32 @@ fn extract_docx_table_text(p_content: &str) -> String {
                 let text_start = pos + t_start + t_close + 1;
                 if let Some(t_end_rel) = p_content[text_start..].find("</w:t>") {
                     let text = &p_content[text_start..text_start + t_end_rel];
-                    let decoded = text.replace("&amp;", "&").replace("&lt;", "<")
-                        .replace("&gt;", ">").replace("&quot;", "\"");
-                    if in_cell { cell_text.push_str(&decoded); }
-                    else if in_row { result.push_str(&decoded); }
+                    let decoded = text
+                        .replace("&amp;", "&")
+                        .replace("&lt;", "<")
+                        .replace("&gt;", ">")
+                        .replace("&quot;", "\"");
+                    if in_cell {
+                        cell_text.push_str(&decoded);
+                    } else if in_row {
+                        result.push_str(&decoded);
+                    }
                     pos = text_start + t_end_rel + 6;
                     continue;
                 }
             }
         }
-        if rest.starts_with("<w:tr") { in_row = true; }
-        if rest.starts_with("</w:tr>") { result.push('\n'); in_row = false; }
-        if rest.starts_with("<w:tc") { in_cell = true; cell_text.clear(); }
+        if rest.starts_with("<w:tr") {
+            in_row = true;
+        }
+        if rest.starts_with("</w:tr>") {
+            result.push('\n');
+            in_row = false;
+        }
+        if rest.starts_with("<w:tc") {
+            in_cell = true;
+            cell_text.clear();
+        }
         if rest.starts_with("</w:tc>") {
             result.push_str(&cell_text);
             result.push('\t');
@@ -218,7 +263,11 @@ fn parse_odt_xml(xml: &str) -> Option<String> {
     }
 
     let trimmed = result.trim().to_string();
-    if trimmed.is_empty() { None } else { Some(trimmed) }
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed)
+    }
 }
 
 #[cfg(feature = "doc-p1")]

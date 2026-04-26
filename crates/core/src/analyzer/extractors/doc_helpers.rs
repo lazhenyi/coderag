@@ -37,7 +37,10 @@ fn extract_doc_from_source(source: &[u8], node_start: usize) -> Option<String> {
     for line in lines.by_ref() {
         let trimmed = line.trim();
         if trimmed.starts_with("/*") && trimmed.contains("*/") {
-            let clean = trimmed.trim_start_matches("/*").trim_end_matches("*/").trim();
+            let clean = trimmed
+                .trim_start_matches("/*")
+                .trim_end_matches("*/")
+                .trim();
             if !clean.is_empty() {
                 doc_lines.push(clean.to_string());
             }
@@ -46,15 +49,20 @@ fn extract_doc_from_source(source: &[u8], node_start: usize) -> Option<String> {
         if (trimmed.starts_with("/*") && !trimmed.ends_with("*/")) || trimmed.starts_with("*/") {
             if trimmed.starts_with("*/") {
                 let clean = trimmed.trim_start_matches("*/").trim().to_string();
-                if !clean.is_empty() { doc_lines.push(clean); }
+                if !clean.is_empty() {
+                    doc_lines.push(clean);
+                }
                 continue;
             }
             if trimmed.starts_with("/*") {
                 let clean = trimmed.trim_start_matches("/*").trim().to_string();
-                if !clean.is_empty() { doc_lines.push(clean); }
+                if !clean.is_empty() {
+                    doc_lines.push(clean);
+                }
                 break;
             }
-        } else if trimmed.starts_with("//") || trimmed.starts_with('#') || trimmed.starts_with("--") {
+        } else if trimmed.starts_with("//") || trimmed.starts_with('#') || trimmed.starts_with("--")
+        {
             let clean = if trimmed.starts_with("//") {
                 trimmed.trim_start_matches("//").trim()
             } else if trimmed.starts_with('#') {
@@ -62,7 +70,11 @@ fn extract_doc_from_source(source: &[u8], node_start: usize) -> Option<String> {
             } else {
                 trimmed.trim_start_matches("--").trim()
             };
-            if clean.is_empty() || clean.starts_with('!') || clean.starts_with("TODO") || clean.starts_with("FIXME") {
+            if clean.is_empty()
+                || clean.starts_with('!')
+                || clean.starts_with("TODO")
+                || clean.starts_with("FIXME")
+            {
                 break;
             }
             doc_lines.push(clean.to_string());
@@ -81,16 +93,23 @@ fn extract_doc_from_source(source: &[u8], node_start: usize) -> Option<String> {
 
 /// Clean up doc text by normalizing comment markers
 pub fn clean_doc_text(lines: &[String]) -> String {
-    let cleaned: Vec<String> = lines.iter().map(|line| {
-        let trimmed = line.trim();
-        if trimmed.starts_with("//!") {
-            trimmed.trim_start_matches("//!").trim().to_string()
-        } else if trimmed.starts_with("/*!") {
-            trimmed.trim_start_matches("/*!").trim_end_matches("*/").trim().to_string()
-        } else {
-            trimmed.to_string()
-        }
-    }).collect();
+    let cleaned: Vec<String> = lines
+        .iter()
+        .map(|line| {
+            let trimmed = line.trim();
+            if trimmed.starts_with("//!") {
+                trimmed.trim_start_matches("//!").trim().to_string()
+            } else if trimmed.starts_with("/*!") {
+                trimmed
+                    .trim_start_matches("/*!")
+                    .trim_end_matches("*/")
+                    .trim()
+                    .to_string()
+            } else {
+                trimmed.to_string()
+            }
+        })
+        .collect();
     let doc = cleaned.join(" ");
     if doc.is_empty() { String::new() } else { doc }
 }

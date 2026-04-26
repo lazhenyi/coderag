@@ -1,4 +1,4 @@
-use actix_web::{http::header, HttpRequest, HttpResponse};
+use actix_web::{HttpRequest, HttpResponse, http::header};
 use mime_guess2::MimeGuess;
 
 use crate::frontend;
@@ -66,7 +66,9 @@ fn content_type_for_path(path: &str) -> String {
             _ => {}
         }
     }
-    MimeGuess::from_path(path).first_or_octet_stream().to_string()
+    MimeGuess::from_path(path)
+        .first_or_octet_stream()
+        .to_string()
 }
 
 fn build_asset_response(
@@ -120,11 +122,9 @@ pub async fn serve_frontend(req: HttpRequest, path: actix_web::web::Path<String>
                 build_asset_response(&req, data, etag, path_str, cc, "")
             }
         }
-        None => {
-            match frontend::get_frontend_asset_with_etag("index.html") {
-                Some((data, etag)) => build_asset_response(&req, data, etag, "index.html", cc, ""),
-                None => HttpResponse::NotFound().finish(),
-            }
-        }
+        None => match frontend::get_frontend_asset_with_etag("index.html") {
+            Some((data, etag)) => build_asset_response(&req, data, etag, "index.html", cc, ""),
+            None => HttpResponse::NotFound().finish(),
+        },
     }
 }

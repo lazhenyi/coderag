@@ -39,10 +39,8 @@ impl StateManager {
     pub fn new(state_file: impl AsRef<Path>) -> AnyResult<Self> {
         let state_file = state_file.as_ref().to_path_buf();
         let state = if state_file.exists() {
-            let content = fs::read_to_string(&state_file)
-                .context("Failed to read state file")?;
-            serde_json::from_str(&content)
-                .context("Failed to parse state file")?
+            let content = fs::read_to_string(&state_file).context("Failed to read state file")?;
+            serde_json::from_str(&content).context("Failed to parse state file")?
         } else {
             IndexerState::default()
         };
@@ -56,16 +54,19 @@ impl StateManager {
     /// Get the last indexed commit for a repository
     pub fn get_last_commit(&self, repo_path: &str) -> Option<Oid> {
         let state = self.state.read().unwrap();
-        state.last_indexed.get(repo_path).and_then(|s| {
-            Oid::from_str(s).ok()
-        })
+        state
+            .last_indexed
+            .get(repo_path)
+            .and_then(|s| Oid::from_str(s).ok())
     }
 
     /// Set the last indexed commit for a repository
     pub fn set_last_commit(&self, repo_path: &str, commit: Oid) -> AnyResult<()> {
         {
             let mut state = self.state.write().unwrap();
-            state.last_indexed.insert(repo_path.to_string(), commit.to_string());
+            state
+                .last_indexed
+                .insert(repo_path.to_string(), commit.to_string());
             state.last_indexed_time.insert(
                 repo_path.to_string(),
                 std::time::SystemTime::now()
@@ -80,17 +81,14 @@ impl StateManager {
     /// Save state to disk
     pub fn save(&self) -> AnyResult<()> {
         let state = self.state.read().unwrap();
-        let content = serde_json::to_string_pretty(&*state)
-            .context("Failed to serialize state")?;
+        let content = serde_json::to_string_pretty(&*state).context("Failed to serialize state")?;
 
         // Create parent directories if needed
         if let Some(parent) = self.state_file.parent() {
-            fs::create_dir_all(parent)
-                .context("Failed to create state directory")?;
+            fs::create_dir_all(parent).context("Failed to create state directory")?;
         }
 
-        fs::write(&self.state_file, content)
-            .context("Failed to write state file")?;
+        fs::write(&self.state_file, content).context("Failed to write state file")?;
 
         Ok(())
     }

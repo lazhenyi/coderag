@@ -1,9 +1,9 @@
 //! Qdrant client implementation
 
-use super::types::{QdrantClient, QdrantConfig, CollectionInfo};
+use super::types::{CollectionInfo, QdrantClient, QdrantConfig};
 use anyhow::{Context, Result as AnyResult};
 use reqwest::Client;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 impl QdrantClient {
     /// Create a new Qdrant client
@@ -46,7 +46,10 @@ impl QdrantClient {
         let resp = self.add_auth(self.http.get(&url)).send().await?;
 
         if resp.status().is_success() {
-            tracing::info!("Collection '{}' already exists", self.config.collection_name);
+            tracing::info!(
+                "Collection '{}' already exists",
+                self.config.collection_name
+            );
             return Ok(());
         }
 
@@ -56,10 +59,15 @@ impl QdrantClient {
     /// Create the collection
     pub async fn create_collection(&self) -> AnyResult<()> {
         #[derive(Serialize)]
-        struct CreateCollectionRequest { vectors: VectorsConfig }
+        struct CreateCollectionRequest {
+            vectors: VectorsConfig,
+        }
 
         #[derive(Serialize)]
-        struct VectorsConfig { size: usize, distance: String }
+        struct VectorsConfig {
+            size: usize,
+            distance: String,
+        }
 
         let request = CreateCollectionRequest {
             vectors: VectorsConfig {
@@ -74,7 +82,10 @@ impl QdrantClient {
             self.config.collection_name
         );
 
-        let resp = self.add_auth(self.http.put(&url).json(&request)).send().await
+        let resp = self
+            .add_auth(self.http.put(&url).json(&request))
+            .send()
+            .await
             .context("Failed to create collection")?;
 
         if !resp.status().is_success() {
@@ -94,7 +105,10 @@ impl QdrantClient {
             self.config.collection_name
         );
 
-        let resp = self.add_auth(self.http.delete(&url)).send().await
+        let resp = self
+            .add_auth(self.http.delete(&url))
+            .send()
+            .await
             .context("Failed to delete collection")?;
 
         if !resp.status().is_success() {
@@ -114,7 +128,10 @@ impl QdrantClient {
             self.config.collection_name
         );
 
-        let resp = self.add_auth(self.http.get(&url)).send().await
+        let resp = self
+            .add_auth(self.http.get(&url))
+            .send()
+            .await
             .context("Failed to get collection info")?;
 
         if !resp.status().is_success() {
@@ -126,7 +143,9 @@ impl QdrantClient {
         }
 
         #[derive(Deserialize)]
-        struct CollectionResponse { result: CollectionResult }
+        struct CollectionResponse {
+            result: CollectionResult,
+        }
 
         #[derive(Deserialize)]
         struct CollectionResult {
@@ -146,7 +165,10 @@ impl QdrantClient {
 
     /// Check if client is connected and collection exists
     pub async fn health_check(&self) -> bool {
-        let url = format!("{}/collections/{}", self.config.url, self.config.collection_name);
+        let url = format!(
+            "{}/collections/{}",
+            self.config.url, self.config.collection_name
+        );
         self.add_auth(self.http.get(&url)).send().await.is_ok()
     }
 }

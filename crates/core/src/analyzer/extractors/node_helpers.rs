@@ -6,7 +6,10 @@ pub fn extract_name(source: &[u8], node: tree_sitter::Node) -> String {
     let mut cursor = node.walk();
     for child in node.children(&mut cursor) {
         let child_kind = child.kind();
-        if matches!(child_kind, "identifier" | "simple_identifier" | "type_identifier") {
+        if matches!(
+            child_kind,
+            "identifier" | "simple_identifier" | "type_identifier"
+        ) {
             if let Ok(text) = child.utf8_text(source) {
                 return text.to_string();
             }
@@ -40,7 +43,10 @@ pub fn extract_function_signature(source: &[u8], node: tree_sitter::Node) -> Str
     let mut cursor = node.walk();
     result.push_str(&extract_name(source, node));
     for child in node.children(&mut cursor) {
-        if matches!(child.kind(), "parameters" | "formal_parameters" | "parameter_list") {
+        if matches!(
+            child.kind(),
+            "parameters" | "formal_parameters" | "parameter_list"
+        ) {
             if let Ok(params) = child.utf8_text(source) {
                 result.push('(');
                 let clean_params = params.trim_start_matches('(').trim_end_matches(')').trim();
@@ -104,7 +110,12 @@ fn extract_signature(source: &[u8], node: tree_sitter::Node, kind: SymbolKind) -
     }
 }
 
-pub fn node_to_symbol(source: &[u8], node: tree_sitter::Node, kind: SymbolKind, file_path: &str) -> Symbol {
+pub fn node_to_symbol(
+    source: &[u8],
+    node: tree_sitter::Node,
+    kind: SymbolKind,
+    file_path: &str,
+) -> Symbol {
     let name = extract_name(source, node);
     let (line_start, line_end) = extract_line_numbers(node);
     let code = extract_code(source, node);
@@ -144,4 +155,4 @@ pub fn extract_symbols_by_kind(
 }
 
 // Re-export doc helpers
-pub use super::doc_helpers::{extract_preceding_doc, clean_doc_text};
+pub use super::doc_helpers::{clean_doc_text, extract_preceding_doc};

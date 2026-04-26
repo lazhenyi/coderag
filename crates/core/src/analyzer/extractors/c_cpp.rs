@@ -1,13 +1,22 @@
 //! C and C++ symbol extraction
 
-use crate::analyzer::symbol::SymbolKind;
 use crate::analyzer::extractors::node_helpers::node_to_symbol;
+use crate::analyzer::symbol::SymbolKind;
 
 /// Extract C symbols
-pub fn extract_c(source: &[u8], node: tree_sitter::Node, file_path: &str, symbols: &mut Vec<crate::analyzer::Symbol>) {
+pub fn extract_c(
+    source: &[u8],
+    node: tree_sitter::Node,
+    file_path: &str,
+    symbols: &mut Vec<crate::analyzer::Symbol>,
+) {
     match node.kind() {
-        "function_definition" | "struct_specifier" | "union_specifier" | "enum_specifier"
-        | "type_definition" | "preproc_def" => {
+        "function_definition"
+        | "struct_specifier"
+        | "union_specifier"
+        | "enum_specifier"
+        | "type_definition"
+        | "preproc_def" => {
             let kind = match node.kind() {
                 "function_definition" => SymbolKind::Function,
                 "struct_specifier" | "union_specifier" => SymbolKind::Struct,
@@ -31,10 +40,20 @@ pub fn extract_c(source: &[u8], node: tree_sitter::Node, file_path: &str, symbol
 }
 
 /// Extract C++ symbols
-pub fn extract_cpp(source: &[u8], node: tree_sitter::Node, file_path: &str, symbols: &mut Vec<crate::analyzer::Symbol>) {
+pub fn extract_cpp(
+    source: &[u8],
+    node: tree_sitter::Node,
+    file_path: &str,
+    symbols: &mut Vec<crate::analyzer::Symbol>,
+) {
     match node.kind() {
-        "function_definition" | "class_specifier" | "struct_specifier" | "enum_specifier"
-        | "namespace_definition" | "template_declaration" | "type_definition" => {
+        "function_definition"
+        | "class_specifier"
+        | "struct_specifier"
+        | "enum_specifier"
+        | "namespace_definition"
+        | "template_declaration"
+        | "type_definition" => {
             let kind = match node.kind() {
                 "function_definition" | "template_declaration" => SymbolKind::Function,
                 "class_specifier" => SymbolKind::Class,

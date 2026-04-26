@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::embedder::types::{Embedding, EmbedderConfig};
+    use crate::embedder::types::{EmbedderConfig, Embedding};
 
     #[test]
     fn test_embedding_creation() {

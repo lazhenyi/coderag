@@ -1,10 +1,15 @@
 //! Rust symbol extraction
 
-use crate::analyzer::symbol::SymbolKind;
 use crate::analyzer::extractors::node_helpers::node_to_symbol;
+use crate::analyzer::symbol::SymbolKind;
 
 /// Extract Rust symbols
-pub fn extract_rust(source: &[u8], node: tree_sitter::Node, file_path: &str, symbols: &mut Vec<crate::analyzer::Symbol>) {
+pub fn extract_rust(
+    source: &[u8],
+    node: tree_sitter::Node,
+    file_path: &str,
+    symbols: &mut Vec<crate::analyzer::Symbol>,
+) {
     let symbol_kinds = [
         ("function_item", SymbolKind::Function),
         ("struct_item", SymbolKind::Struct),

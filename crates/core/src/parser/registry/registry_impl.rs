@@ -1,10 +1,10 @@
 //! Language Registry implementation
 
+use super::types::{CommentStyle, LanguageConfig};
+use crate::parser::languages::Language;
+use anyhow::{Context, Result as AnyResult};
 use std::collections::HashMap;
 use std::path::Path;
-use anyhow::{Context, Result as AnyResult};
-use crate::parser::languages::Language;
-use super::types::{LanguageConfig, CommentStyle};
 
 /// Language registry for managing supported languages
 pub struct LanguageRegistry {
@@ -65,10 +65,12 @@ impl LanguageRegistry {
         self.configs.insert(config.language.clone(), config.clone());
         for ext in &config.extensions {
             let key = ext.strip_prefix('.').unwrap_or(ext);
-            self.extension_map.insert(key.to_string(), config.language.clone());
+            self.extension_map
+                .insert(key.to_string(), config.language.clone());
         }
         if let Some(shebang) = get_shebang_for_language(&config.language) {
-            self.shebang_map.insert(shebang.to_string(), config.language.clone());
+            self.shebang_map
+                .insert(shebang.to_string(), config.language.clone());
         }
         Ok(())
     }
@@ -101,7 +103,10 @@ impl LanguageRegistry {
         detect_by_content_heuristics(content)
     }
 
-    pub fn get_tree_sitter_language(&self, language: &Language) -> AnyResult<tree_sitter::Language> {
+    pub fn get_tree_sitter_language(
+        &self,
+        language: &Language,
+    ) -> AnyResult<tree_sitter::Language> {
         let config = self.configs.get(language).context("Language not found")?;
         Ok(config.tree_sitter_lang.clone())
     }

@@ -1,6 +1,6 @@
 //! Diff implementation
 
-use super::types::{DiffResult, FileChange, FileChangeType, DiffStats};
+use super::types::{DiffResult, DiffStats, FileChange, FileChangeType};
 use crate::repo::{GitRepo, Oid, SerializableOid};
 use anyhow::Result as AnyResult;
 
@@ -41,7 +41,9 @@ impl DiffResult {
                 None
             };
 
-            let path = file_change.new_file().path()
+            let path = file_change
+                .new_file()
+                .path()
                 .or_else(|| file_change.old_file().path())
                 .map(|p| p.to_string_lossy().to_string())
                 .unwrap_or_default();
@@ -75,17 +77,26 @@ impl DiffResult {
 
     /// Get files that were added
     pub fn added_files(&self) -> Vec<&FileChange> {
-        self.changes.iter().filter(|c| c.status == FileChangeType::Added).collect()
+        self.changes
+            .iter()
+            .filter(|c| c.status == FileChangeType::Added)
+            .collect()
     }
 
     /// Get files that were modified
     pub fn modified_files(&self) -> Vec<&FileChange> {
-        self.changes.iter().filter(|c| c.status == FileChangeType::Modified).collect()
+        self.changes
+            .iter()
+            .filter(|c| c.status == FileChangeType::Modified)
+            .collect()
     }
 
     /// Get files that were deleted
     pub fn deleted_files(&self) -> Vec<&FileChange> {
-        self.changes.iter().filter(|c| c.status == FileChangeType::Deleted).collect()
+        self.changes
+            .iter()
+            .filter(|c| c.status == FileChangeType::Deleted)
+            .collect()
     }
 
     /// Get all affected file paths

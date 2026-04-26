@@ -19,8 +19,15 @@ class MyClass {
 async function asyncFunction() { return await Promise.resolve(42); }
 "#;
 
-    let result = parser.parse_with_language(js_code.as_bytes(), Language::JavaScript).unwrap();
-    let symbols = analyzer.extract_symbols(js_code.as_bytes(), &result.tree, &Language::JavaScript, "test.js");
+    let result = parser
+        .parse_with_language(js_code.as_bytes(), Language::JavaScript)
+        .unwrap();
+    let symbols = analyzer.extract_symbols(
+        js_code.as_bytes(),
+        &result.tree,
+        &Language::JavaScript,
+        "test.js",
+    );
     let kinds: Vec<_> = symbols.iter().map(|s| s.kind.clone()).collect();
     assert!(kinds.contains(&SymbolKind::Function));
     assert!(kinds.contains(&SymbolKind::Class));
@@ -46,8 +53,15 @@ const MY_CONST: i32 = 42;
 static MY_STATIC: &str = "hello";
 "#;
 
-    let result = parser.parse_with_language(rust_code.as_bytes(), Language::Rust).unwrap();
-    let symbols = analyzer.extract_symbols(rust_code.as_bytes(), &result.tree, &Language::Rust, "src/lib.rs");
+    let result = parser
+        .parse_with_language(rust_code.as_bytes(), Language::Rust)
+        .unwrap();
+    let symbols = analyzer.extract_symbols(
+        rust_code.as_bytes(),
+        &result.tree,
+        &Language::Rust,
+        "src/lib.rs",
+    );
     let kinds: Vec<_> = symbols.iter().map(|s| s.kind.clone()).collect();
     assert!(kinds.contains(&SymbolKind::Module));
     assert!(kinds.contains(&SymbolKind::Function));
@@ -75,8 +89,15 @@ async def async_function(): pass
 class AnotherClass(BaseClass): pass
 "#;
 
-    let result = parser.parse_with_language(python_code.as_bytes(), Language::Python).unwrap();
-    let symbols = analyzer.extract_symbols(python_code.as_bytes(), &result.tree, &Language::Python, "test.py");
+    let result = parser
+        .parse_with_language(python_code.as_bytes(), Language::Python)
+        .unwrap();
+    let symbols = analyzer.extract_symbols(
+        python_code.as_bytes(),
+        &result.tree,
+        &Language::Python,
+        "test.py",
+    );
     let kinds: Vec<_> = symbols.iter().map(|s| s.kind.clone()).collect();
     assert!(kinds.contains(&SymbolKind::Class));
     assert!(kinds.contains(&SymbolKind::Method));
@@ -96,8 +117,15 @@ fn add(a: i32, b: i32) -> i32 { a + b }
 struct Point { x: f64, y: f64 }
 "#;
 
-    let result = parser.parse_with_language(rust_code.as_bytes(), Language::Rust).unwrap();
-    let symbols = analyzer.extract_symbols(rust_code.as_bytes(), &result.tree, &Language::Rust, "test.rs");
+    let result = parser
+        .parse_with_language(rust_code.as_bytes(), Language::Rust)
+        .unwrap();
+    let symbols = analyzer.extract_symbols(
+        rust_code.as_bytes(),
+        &result.tree,
+        &Language::Rust,
+        "test.rs",
+    );
 
     let add_fn = symbols.iter().find(|s| s.name == "add");
     let point_struct = symbols.iter().find(|s| s.name == "Point");

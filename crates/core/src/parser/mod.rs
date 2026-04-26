@@ -2,11 +2,11 @@
 //!
 //! Provides tree-sitter based parsing for Top 20 programming languages.
 
-mod registry;
 mod languages;
 mod parser_impl;
+mod registry;
 mod tests;
 
 pub use languages::Language;
-pub use parser_impl::{Parser, ParseResult};
-pub use registry::{LanguageRegistry, LanguageConfig};
+pub use parser_impl::{ParseResult, Parser};
+pub use registry::{LanguageConfig, LanguageRegistry};

@@ -30,17 +30,19 @@ pub struct IncrementalIndexer {
 impl IncrementalIndexer {
     /// Create a new incremental indexer
     pub fn new(config: IndexConfig) -> AnyResult<Self> {
-        let parser = Parser::new()
-            .context("Failed to create parser")?;
+        let parser = Parser::new().context("Failed to create parser")?;
 
         let analyzer = Analyzer::new();
         let chunker = Chunker::new();
 
         let embedder = if config.qdrant_url != "" || config.use_local_storage {
             let embedder_config = EmbedderConfig {
-                api_url: config.embed_api_url.clone()
-                    .unwrap_or_else(|| "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings".to_string()),
-                model: config.embed_model.clone()
+                api_url: config.embed_api_url.clone().unwrap_or_else(|| {
+                    "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings".to_string()
+                }),
+                model: config
+                    .embed_model
+                    .clone()
                     .unwrap_or_else(|| "text-embedding-v4".to_string()),
                 dimension: config.embed_dimension.unwrap_or(1024),
                 api_key: config.embed_api_key.clone(),
@@ -63,7 +65,9 @@ impl IncrementalIndexer {
                 collection_name: config.collection_name.clone(),
                 ..Default::default()
             };
-            Some(StorageBackend::from_config(&StorageConfig::Qdrant(storage_config))?)
+            Some(StorageBackend::from_config(&StorageConfig::Qdrant(
+                storage_config,
+            ))?)
         } else {
             None
         };
@@ -83,11 +87,13 @@ impl IncrementalIndexer {
         let start = Instant::now();
         let mut stats = IndexStats::new();
 
-        info!("Starting incremental index: {} -> {}", old_commit, new_commit);
+        info!(
+            "Starting incremental index: {} -> {}",
+            old_commit, new_commit
+        );
 
         // Open repository
-        let repo = GitRepo::open(&self.config.repo_path)
-            .context("Failed to open repository")?;
+        let repo = GitRepo::open(&self.config.repo_path).context("Failed to open repository")?;
 
         // Compute diff
         let diff = DiffResult::diff_commits(&repo, old_commit, new_commit)
@@ -95,9 +101,7 @@ impl IncrementalIndexer {
 
         info!(
             "Diff: {} added, {} modified, {} deleted",
-            diff.stats.files_added,
-            diff.stats.files_modified,
-            diff.stats.files_deleted
+            diff.stats.files_added, diff.stats.files_modified, diff.stats.files_deleted
         );
 
         // Process modified and added files
@@ -107,7 +111,9 @@ impl IncrementalIndexer {
             match change.status {
                 FileChangeType::Added | FileChangeType::Modified => {
                     if let Some(new_blob) = &change.new_blob_id {
-                        if let Some(chunk) = self.process_file(&repo, &change.path, new_blob.inner()) {
+                        if let Some(chunk) =
+                            self.process_file(&repo, &change.path, new_blob.inner())
+                        {
                             chunks.extend(chunk);
                         }
                     }
@@ -115,10 +121,12 @@ impl IncrementalIndexer {
                 FileChangeType::Deleted => {
                     // Delete chunks for this file from storage
                     if let Some(ref storage) = self.storage {
-                        let _ = storage.delete_by_filter(SearchFilter {
-                            file: Some(change.path.clone()),
-                            ..Default::default()
-                        }).await;
+                        let _ = storage
+                            .delete_by_filter(SearchFilter {
+                                file: Some(change.path.clone()),
+                                ..Default::default()
+                            })
+                            .await;
                         info!("Deleted chunks for deleted file: {}", change.path);
                     }
                 }
@@ -126,7 +134,9 @@ impl IncrementalIndexer {
             }
         }
 
-        stats.files_processed = diff.changes.iter()
+        stats.files_processed = diff
+            .changes
+            .iter()
             .filter(|c| matches!(c.status, FileChangeType::Added | FileChangeType::Modified))
             .count();
 
@@ -168,7 +178,10 @@ impl IncrementalIndexer {
         }
 
         stats.duration_secs = start.elapsed().as_secs_f64();
-        info!("Incremental indexing completed in {:.2}s", stats.duration_secs);
+        info!(
+            "Incremental indexing completed in {:.2}s",
+            stats.duration_secs
+        );
 
         Ok(stats)
     }
@@ -199,12 +212,9 @@ impl IncrementalIndexer {
         };
 
         // Extract symbols
-        let symbols = self.analyzer.extract_symbols(
-            &content,
-            &parse_result.tree,
-            &language,
-            path,
-        );
+        let symbols = self
+            .analyzer
+            .extract_symbols(&content, &parse_result.tree, &language, path);
 
         // Create chunks
         let head = repo.head_commit().ok()?;

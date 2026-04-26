@@ -7,12 +7,18 @@ use git2::Oid;
 pub struct SerializableOid(Oid);
 
 impl SerializableOid {
-    pub fn new(oid: Oid) -> Self { Self(oid) }
-    pub fn inner(&self) -> Oid { self.0 }
+    pub fn new(oid: Oid) -> Self {
+        Self(oid)
+    }
+    pub fn inner(&self) -> Oid {
+        self.0
+    }
 }
 
 impl From<Oid> for SerializableOid {
-    fn from(oid: Oid) -> Self { Self(oid) }
+    fn from(oid: Oid) -> Self {
+        Self(oid)
+    }
 }
 
 impl std::fmt::Display for SerializableOid {
@@ -23,7 +29,8 @@ impl std::fmt::Display for SerializableOid {
 
 impl serde::Serialize for SerializableOid {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where S: serde::Serializer,
+    where
+        S: serde::Serializer,
     {
         serializer.serialize_str(&self.0.to_string())
     }
@@ -31,7 +38,8 @@ impl serde::Serialize for SerializableOid {
 
 impl<'de> serde::Deserialize<'de> for SerializableOid {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where D: serde::Deserializer<'de>,
+    where
+        D: serde::Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
         let oid = Oid::from_str(&s).map_err(serde::de::Error::custom)?;

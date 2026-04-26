@@ -49,7 +49,11 @@ impl TextChunker {
                 }
             }
             DocFormat::Xml => strip_xml_tags(&text),
-            DocFormat::Json | DocFormat::Toml | DocFormat::Ini | DocFormat::Csv | DocFormat::Log => text.to_string(),
+            DocFormat::Json
+            | DocFormat::Toml
+            | DocFormat::Ini
+            | DocFormat::Csv
+            | DocFormat::Log => text.to_string(),
             _ => text.to_string(),
         };
 

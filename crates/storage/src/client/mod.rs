@@ -5,4 +5,6 @@ mod search_ops;
 mod tests;
 mod types;
 
-pub use types::{ChunkPayload, QdrantClient, QdrantConfig, SearchFilter, SearchResult, SearchOptions};
+pub use types::{
+    ChunkPayload, QdrantClient, QdrantConfig, SearchFilter, SearchOptions, SearchResult,
+};

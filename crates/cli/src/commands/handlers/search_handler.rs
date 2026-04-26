@@ -2,7 +2,9 @@
 
 use crate::config::Config;
 use anyhow::{Context, Result as AnyResult};
-use coderag_storage::{SearchResult, StorageBackend, StorageConfig, QdrantConfig, SearchFilter, SearchOptions};
+use coderag_storage::{
+    QdrantConfig, SearchFilter, SearchOptions, SearchResult, StorageBackend, StorageConfig,
+};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -45,13 +47,17 @@ pub async fn search_code(
         })?;
         store
     } else {
-        let qdrant_url = config.qdrant_url.clone()
+        let qdrant_url = config
+            .qdrant_url
+            .clone()
             .unwrap_or_else(|| "http://localhost:6333".to_string());
 
         let storage_config = QdrantConfig {
             url: qdrant_url.clone(),
             api_key: config.qdrant_api_key.clone(),
-            collection_name: config.collection_name.clone()
+            collection_name: config
+                .collection_name
+                .clone()
                 .unwrap_or_else(|| "coderag".to_string()),
             ..Default::default()
         };
@@ -61,8 +67,12 @@ pub async fn search_code(
         if !store.health_check().await {
             if !graph {
                 println!("\nError: Cannot connect to Qdrant at {}", qdrant_url);
-                println!("Make sure Qdrant is running (docker run -p 6333:6333 -p 6334:6334 qdrant/qdrant)");
-                println!("Or use --local to search with local storage: coderag search --local \"query\"");
+                println!(
+                    "Make sure Qdrant is running (docker run -p 6333:6333 -p 6334:6334 qdrant/qdrant)"
+                );
+                println!(
+                    "Or use --local to search with local storage: coderag search --local \"query\""
+                );
             } else {
                 eprintln!("Error: Cannot connect to Qdrant at {}", qdrant_url);
             }
@@ -75,9 +85,12 @@ pub async fn search_code(
     let openai_api_key = config.openai_api_key.clone();
 
     let embedder_config = coderag_core::embedder::EmbedderConfig {
-        api_url: config.embed_url.clone()
-            .unwrap_or_else(|| "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings".to_string()),
-        model: config.embed_model.clone()
+        api_url: config.embed_url.clone().unwrap_or_else(|| {
+            "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings".to_string()
+        }),
+        model: config
+            .embed_model
+            .clone()
             .unwrap_or_else(|| "text-embedding-v4".to_string()),
         dimension: config.embed_dimension.unwrap_or(1024),
         api_key: openai_api_key,
@@ -170,26 +183,33 @@ fn output_text_results(results: &[SearchResult]) {
                 println!("   Doc: {}", doc_short);
             }
         }
-        if !result.payload.signature.is_empty() && result.payload.signature != result.payload.symbol {
+        if !result.payload.signature.is_empty() && result.payload.signature != result.payload.symbol
+        {
             println!("   Signature: {}", result.payload.signature);
         }
-        println!("   Code: {}", result.payload.code.lines().next().unwrap_or(""));
+        println!(
+            "   Code: {}",
+            result.payload.code.lines().next().unwrap_or("")
+        );
         println!();
     }
 }
 
 fn output_graph_json(results: &[SearchResult]) {
-    let nodes: Vec<GraphNode> = results.iter().map(|r| GraphNode {
-        id: r.id.clone(),
-        name: r.payload.symbol.clone(),
-        kind: r.payload.kind.clone(),
-        file: r.payload.file.clone(),
-        module: r.payload.module.clone(),
-        language: r.payload.language.clone(),
-        score: r.score,
-        code: r.payload.code.clone(),
-        val: (r.score * 20.0).max(3.0).min(20.0) as u32,
-    }).collect();
+    let nodes: Vec<GraphNode> = results
+        .iter()
+        .map(|r| GraphNode {
+            id: r.id.clone(),
+            name: r.payload.symbol.clone(),
+            kind: r.payload.kind.clone(),
+            file: r.payload.file.clone(),
+            module: r.payload.module.clone(),
+            language: r.payload.language.clone(),
+            score: r.score,
+            code: r.payload.code.clone(),
+            val: (r.score * 20.0).max(3.0).min(20.0) as u32,
+        })
+        .collect();
 
     let mut links: Vec<GraphLink> = Vec::new();
     for i in 0..nodes.len() {
@@ -197,10 +217,18 @@ fn output_graph_json(results: &[SearchResult]) {
             let a = &nodes[i];
             let b = &nodes[j];
             if a.file == b.file && !a.file.is_empty() {
-                links.push(GraphLink { source: a.id.clone(), target: b.id.clone(), relation: "same_file".into() });
+                links.push(GraphLink {
+                    source: a.id.clone(),
+                    target: b.id.clone(),
+                    relation: "same_file".into(),
+                });
             }
             if a.module == b.module && !a.module.is_empty() {
-                links.push(GraphLink { source: a.id.clone(), target: b.id.clone(), relation: "same_module".into() });
+                links.push(GraphLink {
+                    source: a.id.clone(),
+                    target: b.id.clone(),
+                    relation: "same_module".into(),
+                });
             }
         }
     }
@@ -211,5 +239,8 @@ fn output_graph_json(results: &[SearchResult]) {
         "total": nodes.len(),
     });
 
-    println!("{}", serde_json::to_string_pretty(&output).unwrap_or_default());
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&output).unwrap_or_default()
+    );
 }

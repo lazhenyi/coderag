@@ -2,7 +2,7 @@
 //!
 //! Repository pattern for managing chunks in storage.
 
-use crate::client::{ChunkPayload, QdrantClient, SearchOptions, SearchResult, SearchFilter};
+use crate::client::{ChunkPayload, QdrantClient, SearchFilter, SearchOptions, SearchResult};
 use anyhow::Result as AnyResult;
 
 /// Repository for chunk operations
@@ -23,7 +23,9 @@ impl ChunkRepository {
         vector: &[f32],
         payload: ChunkPayload,
     ) -> AnyResult<()> {
-        self.client.upsert_points_batch(vec![(chunk_id.to_string(), vector.to_vec(), payload)]).await
+        self.client
+            .upsert_points_batch(vec![(chunk_id.to_string(), vector.to_vec(), payload)])
+            .await
     }
 
     /// Store multiple chunks

@@ -2,7 +2,7 @@
 
 use super::extractors;
 use crate::chunker::Chunk;
-use crate::document::{detect_doc_format, BinaryExtractor, DocFormat, TextChunker};
+use crate::document::{BinaryExtractor, DocFormat, TextChunker, detect_doc_format};
 use std::path::Path;
 use tracing::warn;
 
@@ -56,16 +56,35 @@ impl ArchiveHandler {
         for entry in &entries {
             let entry_path = Path::new(&entry.path);
             let doc_format = detect_doc_format(entry_path);
-            if doc_format == DocFormat::Unknown { continue; }
+            if doc_format == DocFormat::Unknown {
+                continue;
+            }
 
-            if let Some(chunks) = self.text_chunker.process_file(entry_path, &entry.content, doc_format, repo, branch, commit) {
+            if let Some(chunks) = self.text_chunker.process_file(
+                entry_path,
+                &entry.content,
+                doc_format,
+                repo,
+                branch,
+                commit,
+            ) {
                 all_chunks.extend(chunks);
                 continue;
             }
 
             if doc_format.is_p1_supported() {
-                if let Some(text) = self.binary_extractor.extract_text(entry_path, &entry.content, doc_format) {
-                    if let Some(mut chunks) = self.text_chunker.process_file(entry_path, text.as_bytes(), doc_format, repo, branch, commit) {
+                if let Some(text) =
+                    self.binary_extractor
+                        .extract_text(entry_path, &entry.content, doc_format)
+                {
+                    if let Some(mut chunks) = self.text_chunker.process_file(
+                        entry_path,
+                        text.as_bytes(),
+                        doc_format,
+                        repo,
+                        branch,
+                        commit,
+                    ) {
                         for chunk in &mut chunks {
                             chunk.file = format!("{}:{}", path.display(), entry.path);
                         }
@@ -75,10 +94,16 @@ impl ArchiveHandler {
             }
         }
 
-        if all_chunks.is_empty() { None } else { Some(all_chunks) }
+        if all_chunks.is_empty() {
+            None
+        } else {
+            Some(all_chunks)
+        }
     }
 }
 
 impl Default for ArchiveHandler {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }

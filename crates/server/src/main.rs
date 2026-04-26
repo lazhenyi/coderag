@@ -1,9 +1,9 @@
 use actix_cors::Cors;
-use actix_web::{web, App, HttpServer, HttpResponse, middleware};
+use actix_web::{App, HttpResponse, HttpServer, middleware, web};
 use coderag_core::embedder::{Embedder, EmbedderConfig};
 use coderag_core::repo::GitRepo;
 use coderag_indexer::{FullIndexer, IndexConfig};
-use coderag_storage::{StorageBackend, StorageConfig, QdrantConfig, SearchFilter, SearchOptions};
+use coderag_storage::{QdrantConfig, SearchFilter, SearchOptions, StorageBackend, StorageConfig};
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 
@@ -62,9 +62,15 @@ struct SearchRequest {
     score_threshold: f32,
 }
 
-fn default_limit() -> usize { 10 }
-fn default_use_local() -> bool { true }
-fn default_score_threshold() -> f32 { 0.5 }
+fn default_limit() -> usize {
+    10
+}
+fn default_use_local() -> bool {
+    true
+}
+fn default_score_threshold() -> f32 {
+    0.5
+}
 
 #[derive(Deserialize)]
 struct IndexRequest {
@@ -77,7 +83,9 @@ struct IndexRequest {
     local: bool,
 }
 
-fn default_branch() -> String { "main".into() }
+fn default_branch() -> String {
+    "main".into()
+}
 
 #[derive(Serialize)]
 struct SearchResult {
@@ -115,18 +123,21 @@ struct LanguageInfo {
     extensions: Vec<String>,
 }
 
-async fn search(
-    req: web::Json<SearchRequest>,
-    state: web::Data<AppState>,
-) -> HttpResponse {
+async fn search(req: web::Json<SearchRequest>, state: web::Data<AppState>) -> HttpResponse {
     let storage = match create_storage(&state.config, req.local).await {
         Ok(s) => s,
-        Err(e) => return HttpResponse::InternalServerError().json(serde_json::json!({"error": e.to_string()})),
+        Err(e) => {
+            return HttpResponse::InternalServerError()
+                .json(serde_json::json!({"error": e.to_string()}));
+        }
     };
 
     let embedder = match create_embedder(&state.config) {
         Ok(e) => e,
-        Err(e) => return HttpResponse::InternalServerError().json(serde_json::json!({"error": e.to_string()})),
+        Err(e) => {
+            return HttpResponse::InternalServerError()
+                .json(serde_json::json!({"error": e.to_string()}));
+        }
     };
 
     // Create a dummy chunk for embedding the query
@@ -150,7 +161,10 @@ async fn search(
 
     let embedding = match embedder.embed_chunk(&query_chunk).await {
         Ok(e) => e,
-        Err(e) => return HttpResponse::InternalServerError().json(serde_json::json!({"error": format!("Embedding failed: {}", e)})),
+        Err(e) => {
+            return HttpResponse::InternalServerError()
+                .json(serde_json::json!({"error": format!("Embedding failed: {}", e)}));
+        }
     };
 
     let filter = SearchFilter {
@@ -171,36 +185,39 @@ async fn search(
 
     match storage.search(&embedding.vector, options).await {
         Ok(results) => {
-            let items: Vec<SearchResult> = results.iter().map(|r| SearchResult {
-                id: r.id.clone(),
-                score: r.score,
-                symbol: r.payload.symbol.clone(),
-                file: r.payload.file.clone(),
-                language: r.payload.language.clone(),
-                kind: r.payload.kind.clone(),
-                signature: r.payload.signature.clone(),
-                doc: r.payload.doc.clone(),
-                code: r.payload.code.clone(),
-                start_line: r.payload.start_line,
-                end_line: r.payload.end_line,
-            }).collect();
+            let items: Vec<SearchResult> = results
+                .iter()
+                .map(|r| SearchResult {
+                    id: r.id.clone(),
+                    score: r.score,
+                    symbol: r.payload.symbol.clone(),
+                    file: r.payload.file.clone(),
+                    language: r.payload.language.clone(),
+                    kind: r.payload.kind.clone(),
+                    signature: r.payload.signature.clone(),
+                    doc: r.payload.doc.clone(),
+                    code: r.payload.code.clone(),
+                    start_line: r.payload.start_line,
+                    end_line: r.payload.end_line,
+                })
+                .collect();
 
             HttpResponse::Ok().json(serde_json::json!({
                 "results": items,
                 "total": items.len(),
             }))
         }
-        Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({"error": e.to_string()})),
+        Err(e) => {
+            HttpResponse::InternalServerError().json(serde_json::json!({"error": e.to_string()}))
+        }
     }
 }
 
-async fn index(
-    req: web::Json<IndexRequest>,
-    state: web::Data<AppState>,
-) -> HttpResponse {
+async fn index(req: web::Json<IndexRequest>, state: web::Data<AppState>) -> HttpResponse {
     let status = state.indexing_status.read();
     if status.is_indexing {
-        return HttpResponse::Conflict().json(serde_json::json!({"error": "Indexing already in progress"}));
+        return HttpResponse::Conflict()
+            .json(serde_json::json!({"error": "Indexing already in progress"}));
     }
     drop(status);
 
@@ -213,7 +230,12 @@ async fn index(
             let mut status = status_ref.write();
             status.is_indexing = true;
             status.last_error = None;
-            status.started_at = Some(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs());
+            status.started_at = Some(
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
+            );
             status.progress = None;
         }
 
@@ -265,62 +287,75 @@ async fn index_status(state: web::Data<AppState>) -> HttpResponse {
 
 async fn repo_info(state: web::Data<AppState>) -> HttpResponse {
     match GitRepo::open(&state.config.repo_path) {
-        Ok(repo) => {
-            match repo.head_commit() {
-                Ok(head) => {
-                    let tree = match repo.commit_to_tree(head.oid.inner()) {
-                        Ok(t) => t,
-                        Err(_) => return HttpResponse::InternalServerError().json(serde_json::json!({"error": "Failed to read tree"})),
-                    };
-                    let files = match repo.walk_tree(&tree) {
-                        Ok(f) => f,
-                        Err(_) => return HttpResponse::InternalServerError().json(serde_json::json!({"error": "Failed to walk tree"})),
-                    };
-                    let branch = match repo.current_branch() {
-                        Ok(b) => b,
-                        Err(_) => "unknown".into(),
-                    };
+        Ok(repo) => match repo.head_commit() {
+            Ok(head) => {
+                let tree = match repo.commit_to_tree(head.oid.inner()) {
+                    Ok(t) => t,
+                    Err(_) => {
+                        return HttpResponse::InternalServerError()
+                            .json(serde_json::json!({"error": "Failed to read tree"}));
+                    }
+                };
+                let files = match repo.walk_tree(&tree) {
+                    Ok(f) => f,
+                    Err(_) => {
+                        return HttpResponse::InternalServerError()
+                            .json(serde_json::json!({"error": "Failed to walk tree"}));
+                    }
+                };
+                let branch = match repo.current_branch() {
+                    Ok(b) => b,
+                    Err(_) => "unknown".into(),
+                };
 
-                    HttpResponse::Ok().json(RepoInfo {
-                        path: state.config.repo_path.clone(),
-                        branch,
-                        head_oid: head.oid.to_string(),
-                        head_message: head.message,
-                        file_count: files.len(),
-                    })
-                }
-                Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({"error": format!("Failed to get HEAD: {}", e)})),
+                HttpResponse::Ok().json(RepoInfo {
+                    path: state.config.repo_path.clone(),
+                    branch,
+                    head_oid: head.oid.to_string(),
+                    head_message: head.message,
+                    file_count: files.len(),
+                })
             }
-        }
-        Err(e) => HttpResponse::BadRequest().json(serde_json::json!({"error": format!("Failed to open repo: {}", e)})),
+            Err(e) => HttpResponse::InternalServerError()
+                .json(serde_json::json!({"error": format!("Failed to get HEAD: {}", e)})),
+        },
+        Err(e) => HttpResponse::BadRequest()
+            .json(serde_json::json!({"error": format!("Failed to open repo: {}", e)})),
     }
 }
 
 async fn repo_tree(state: web::Data<AppState>) -> HttpResponse {
     match GitRepo::open(&state.config.repo_path) {
-        Ok(repo) => {
-            match repo.head_commit() {
-                Ok(head) => {
-                    let tree = match repo.commit_to_tree(head.oid.inner()) {
-                        Ok(t) => t,
-                        Err(_) => return HttpResponse::InternalServerError().json(serde_json::json!({"error": "Failed to read tree"})),
-                    };
-                    let files = match repo.walk_tree(&tree) {
-                        Ok(f) => f,
-                        Err(_) => return HttpResponse::InternalServerError().json(serde_json::json!({"error": "Failed to walk tree"})),
-                    };
-                    let nodes: Vec<FileTreeNode> = files.iter()
-                        .map(|f| FileTreeNode {
-                            path: f.path.clone(),
-                            is_dir: false,
-                        })
-                        .collect();
-                    HttpResponse::Ok().json(serde_json::json!({"files": nodes}))
-                }
-                Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({"error": format!("Failed to get HEAD: {}", e)})),
+        Ok(repo) => match repo.head_commit() {
+            Ok(head) => {
+                let tree = match repo.commit_to_tree(head.oid.inner()) {
+                    Ok(t) => t,
+                    Err(_) => {
+                        return HttpResponse::InternalServerError()
+                            .json(serde_json::json!({"error": "Failed to read tree"}));
+                    }
+                };
+                let files = match repo.walk_tree(&tree) {
+                    Ok(f) => f,
+                    Err(_) => {
+                        return HttpResponse::InternalServerError()
+                            .json(serde_json::json!({"error": "Failed to walk tree"}));
+                    }
+                };
+                let nodes: Vec<FileTreeNode> = files
+                    .iter()
+                    .map(|f| FileTreeNode {
+                        path: f.path.clone(),
+                        is_dir: false,
+                    })
+                    .collect();
+                HttpResponse::Ok().json(serde_json::json!({"files": nodes}))
             }
-        }
-        Err(e) => HttpResponse::BadRequest().json(serde_json::json!({"error": format!("Failed to open repo: {}", e)})),
+            Err(e) => HttpResponse::InternalServerError()
+                .json(serde_json::json!({"error": format!("Failed to get HEAD: {}", e)})),
+        },
+        Err(e) => HttpResponse::BadRequest()
+            .json(serde_json::json!({"error": format!("Failed to open repo: {}", e)})),
     }
 }
 
@@ -367,12 +402,18 @@ async fn search_graph(
 ) -> HttpResponse {
     let storage = match create_storage(&state.config, req.local).await {
         Ok(s) => s,
-        Err(e) => return HttpResponse::InternalServerError().json(serde_json::json!({"error": e.to_string()})),
+        Err(e) => {
+            return HttpResponse::InternalServerError()
+                .json(serde_json::json!({"error": e.to_string()}));
+        }
     };
 
     let embedder = match create_embedder(&state.config) {
         Ok(e) => e,
-        Err(e) => return HttpResponse::InternalServerError().json(serde_json::json!({"error": e.to_string()})),
+        Err(e) => {
+            return HttpResponse::InternalServerError()
+                .json(serde_json::json!({"error": e.to_string()}));
+        }
     };
 
     let query_chunk = coderag_core::chunker::Chunk {
@@ -395,7 +436,10 @@ async fn search_graph(
 
     let embedding = match embedder.embed_chunk(&query_chunk).await {
         Ok(e) => e,
-        Err(e) => return HttpResponse::InternalServerError().json(serde_json::json!({"error": format!("Embedding failed: {}", e)})),
+        Err(e) => {
+            return HttpResponse::InternalServerError()
+                .json(serde_json::json!({"error": format!("Embedding failed: {}", e)}));
+        }
     };
 
     let filter = SearchFilter {
@@ -416,24 +460,30 @@ async fn search_graph(
 
     let results = match storage.search(&embedding.vector, options).await {
         Ok(r) => r,
-        Err(e) => return HttpResponse::InternalServerError().json(serde_json::json!({"error": e.to_string()})),
+        Err(e) => {
+            return HttpResponse::InternalServerError()
+                .json(serde_json::json!({"error": e.to_string()}));
+        }
     };
 
-    let nodes: Vec<GraphNode> = results.iter().map(|r| GraphNode {
-        id: r.id.clone(),
-        name: r.payload.symbol.clone(),
-        kind: r.payload.kind.clone(),
-        file: r.payload.file.clone(),
-        module: r.payload.module.clone(),
-        language: r.payload.language.clone(),
-        score: r.score,
-        code: r.payload.code.clone(),
-        doc: r.payload.doc.clone(),
-        signature: r.payload.signature.clone(),
-        start_line: r.payload.start_line,
-        end_line: r.payload.end_line,
-        val: (r.score * 20.0).max(3.0).min(20.0) as u32,
-    }).collect();
+    let nodes: Vec<GraphNode> = results
+        .iter()
+        .map(|r| GraphNode {
+            id: r.id.clone(),
+            name: r.payload.symbol.clone(),
+            kind: r.payload.kind.clone(),
+            file: r.payload.file.clone(),
+            module: r.payload.module.clone(),
+            language: r.payload.language.clone(),
+            score: r.score,
+            code: r.payload.code.clone(),
+            doc: r.payload.doc.clone(),
+            signature: r.payload.signature.clone(),
+            start_line: r.payload.start_line,
+            end_line: r.payload.end_line,
+            val: (r.score * 20.0).max(3.0).min(20.0) as u32,
+        })
+        .collect();
 
     let mut links: Vec<GraphLink> = Vec::new();
     for i in 0..nodes.len() {
@@ -442,11 +492,19 @@ async fn search_graph(
             let b = &nodes[j];
             // Same file relationship
             if a.file == b.file && !a.file.is_empty() {
-                links.push(GraphLink { source: a.id.clone(), target: b.id.clone(), relation: "same_file".into() });
+                links.push(GraphLink {
+                    source: a.id.clone(),
+                    target: b.id.clone(),
+                    relation: "same_file".into(),
+                });
             }
             // Same module relationship
             if a.module == b.module && !a.module.is_empty() {
-                links.push(GraphLink { source: a.id.clone(), target: b.id.clone(), relation: "same_module".into() });
+                links.push(GraphLink {
+                    source: a.id.clone(),
+                    target: b.id.clone(),
+                    relation: "same_module".into(),
+                });
             }
             // Same language
             if a.language == b.language && !a.language.is_empty() && a.language != b.language {
@@ -464,26 +522,86 @@ async fn search_graph(
 
 async fn languages() -> HttpResponse {
     let langs = vec![
-        LanguageInfo { name: "Rust".into(), extensions: vec![".rs".into()] },
-        LanguageInfo { name: "Python".into(), extensions: vec![".py".into(), ".pyw".into()] },
-        LanguageInfo { name: "JavaScript".into(), extensions: vec![".js".into(), ".jsx".into(), ".mjs".into()] },
-        LanguageInfo { name: "TypeScript".into(), extensions: vec![".ts".into(), ".tsx".into(), ".mts".into()] },
-        LanguageInfo { name: "Java".into(), extensions: vec![".java".into()] },
-        LanguageInfo { name: "Go".into(), extensions: vec![".go".into()] },
-        LanguageInfo { name: "C".into(), extensions: vec![".c".into(), ".h".into()] },
-        LanguageInfo { name: "C++".into(), extensions: vec![".cpp".into(), ".cc".into(), ".hpp".into()] },
-        LanguageInfo { name: "C#".into(), extensions: vec![".cs".into()] },
-        LanguageInfo { name: "Swift".into(), extensions: vec![".swift".into()] },
-        LanguageInfo { name: "Kotlin".into(), extensions: vec![".kt".into(), ".kts".into()] },
-        LanguageInfo { name: "PHP".into(), extensions: vec![".php".into()] },
-        LanguageInfo { name: "Ruby".into(), extensions: vec![".rb".into()] },
-        LanguageInfo { name: "Shell".into(), extensions: vec![".sh".into(), ".bash".into()] },
-        LanguageInfo { name: "Scala".into(), extensions: vec![".scala".into()] },
-        LanguageInfo { name: "Dart".into(), extensions: vec![".dart".into()] },
-        LanguageInfo { name: "Lua".into(), extensions: vec![".lua".into()] },
-        LanguageInfo { name: "R".into(), extensions: vec![".r".into(), ".R".into()] },
-        LanguageInfo { name: "Perl".into(), extensions: vec![".pl".into(), ".pm".into()] },
-        LanguageInfo { name: "SQL".into(), extensions: vec![".sql".into()] },
+        LanguageInfo {
+            name: "Rust".into(),
+            extensions: vec![".rs".into()],
+        },
+        LanguageInfo {
+            name: "Python".into(),
+            extensions: vec![".py".into(), ".pyw".into()],
+        },
+        LanguageInfo {
+            name: "JavaScript".into(),
+            extensions: vec![".js".into(), ".jsx".into(), ".mjs".into()],
+        },
+        LanguageInfo {
+            name: "TypeScript".into(),
+            extensions: vec![".ts".into(), ".tsx".into(), ".mts".into()],
+        },
+        LanguageInfo {
+            name: "Java".into(),
+            extensions: vec![".java".into()],
+        },
+        LanguageInfo {
+            name: "Go".into(),
+            extensions: vec![".go".into()],
+        },
+        LanguageInfo {
+            name: "C".into(),
+            extensions: vec![".c".into(), ".h".into()],
+        },
+        LanguageInfo {
+            name: "C++".into(),
+            extensions: vec![".cpp".into(), ".cc".into(), ".hpp".into()],
+        },
+        LanguageInfo {
+            name: "C#".into(),
+            extensions: vec![".cs".into()],
+        },
+        LanguageInfo {
+            name: "Swift".into(),
+            extensions: vec![".swift".into()],
+        },
+        LanguageInfo {
+            name: "Kotlin".into(),
+            extensions: vec![".kt".into(), ".kts".into()],
+        },
+        LanguageInfo {
+            name: "PHP".into(),
+            extensions: vec![".php".into()],
+        },
+        LanguageInfo {
+            name: "Ruby".into(),
+            extensions: vec![".rb".into()],
+        },
+        LanguageInfo {
+            name: "Shell".into(),
+            extensions: vec![".sh".into(), ".bash".into()],
+        },
+        LanguageInfo {
+            name: "Scala".into(),
+            extensions: vec![".scala".into()],
+        },
+        LanguageInfo {
+            name: "Dart".into(),
+            extensions: vec![".dart".into()],
+        },
+        LanguageInfo {
+            name: "Lua".into(),
+            extensions: vec![".lua".into()],
+        },
+        LanguageInfo {
+            name: "R".into(),
+            extensions: vec![".r".into(), ".R".into()],
+        },
+        LanguageInfo {
+            name: "Perl".into(),
+            extensions: vec![".pl".into(), ".pm".into()],
+        },
+        LanguageInfo {
+            name: "SQL".into(),
+            extensions: vec![".sql".into()],
+        },
     ];
     HttpResponse::Ok().json(serde_json::json!({"languages": langs}))
 }
@@ -527,20 +645,18 @@ async fn main() -> std::io::Result<()> {
     let repo_path = std::env::var("CODERAG_REPO").unwrap_or_else(|_| ".".into());
     let embed_url = std::env::var("CODERAG_EMBED_URL")
         .unwrap_or_else(|_| "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings".into());
-    let embed_model = std::env::var("CODERAG_EMBED_MODEL")
-        .unwrap_or_else(|_| "text-embedding-v4".into());
+    let embed_model =
+        std::env::var("CODERAG_EMBED_MODEL").unwrap_or_else(|_| "text-embedding-v4".into());
     let embed_dimension: usize = std::env::var("CODERAG_EMBED_DIMENSION")
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(1024);
     let embed_api_key = std::env::var("OPENAI_API_KEY").ok();
-    let qdrant_url = std::env::var("QDRANT_URL")
-        .unwrap_or_else(|_| "http://localhost:6333".into());
+    let qdrant_url = std::env::var("QDRANT_URL").unwrap_or_else(|_| "http://localhost:6333".into());
     let qdrant_api_key = std::env::var("QDRANT_API_KEY").ok();
-    let collection_name = std::env::var("CODERAG_COLLECTION")
-        .unwrap_or_else(|_| "coderag".into());
-    let state_file = std::env::var("CODERAG_STATE_FILE")
-        .unwrap_or_else(|_| ".coderag/state.json".into());
+    let collection_name = std::env::var("CODERAG_COLLECTION").unwrap_or_else(|_| "coderag".into());
+    let state_file =
+        std::env::var("CODERAG_STATE_FILE").unwrap_or_else(|_| ".coderag/state.json".into());
     let batch_size: usize = std::env::var("CODERAG_BATCH_SIZE")
         .ok()
         .and_then(|v| v.parse().ok())
@@ -590,9 +706,11 @@ async fn main() -> std::io::Result<()> {
             .route("/api/repo/info", web::get().to(repo_info))
             .route("/api/repo/tree", web::get().to(repo_tree))
             .route("/api/languages", web::get().to(languages))
-            .route("/health", web::get().to(|| async {
-                HttpResponse::Ok().json(serde_json::json!({"status": "ok"}))
-            }))
+            .route(
+                "/health",
+                web::get()
+                    .to(|| async { HttpResponse::Ok().json(serde_json::json!({"status": "ok"})) }),
+            )
             .route("/{path:.*}", web::get().to(frontend_serve::serve_frontend))
     })
     .bind(&bind_addr)?

@@ -2,8 +2,8 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::document::archive_handler::ArchiveHandler;
     use crate::document::DocFormat;
+    use crate::document::archive_handler::ArchiveHandler;
     use std::path::Path;
 
     #[test]
@@ -17,14 +17,28 @@ mod tests {
     #[test]
     fn test_non_archive_returns_none() {
         let handler = ArchiveHandler::new();
-        let result = handler.process_archive(Path::new("test.txt"), b"hello", DocFormat::Text, "test", "main", "abc");
+        let result = handler.process_archive(
+            Path::new("test.txt"),
+            b"hello",
+            DocFormat::Text,
+            "test",
+            "main",
+            "abc",
+        );
         assert!(result.is_none());
     }
 
     #[test]
     fn test_invalid_zip_returns_none() {
         let handler = ArchiveHandler::new();
-        let result = handler.process_archive(Path::new("test.zip"), b"not a real zip", DocFormat::Zip, "test", "main", "abc");
+        let result = handler.process_archive(
+            Path::new("test.zip"),
+            b"not a real zip",
+            DocFormat::Zip,
+            "test",
+            "main",
+            "abc",
+        );
         assert!(result.is_none());
     }
 }

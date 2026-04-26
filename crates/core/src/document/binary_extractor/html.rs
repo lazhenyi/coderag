@@ -12,7 +12,10 @@ pub fn extract_html(content: &[u8]) -> Option<String> {
 
     for ch in html.chars() {
         match ch {
-            '<' => { in_tag = true; tag_buf.clear(); }
+            '<' => {
+                in_tag = true;
+                tag_buf.clear();
+            }
             '>' if in_tag => {
                 in_tag = false;
                 let tag_lower = tag_buf.to_lowercase();
@@ -24,12 +27,21 @@ pub fn extract_html(content: &[u8]) -> Option<String> {
                     in_style = true;
                 } else if tag_lower.starts_with("/style") {
                     in_style = false;
-                } else if matches!(tag_lower.split_whitespace().next(), Some("br" | "p" | "div" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "li" | "tr")) {
+                } else if matches!(
+                    tag_lower.split_whitespace().next(),
+                    Some(
+                        "br" | "p" | "div" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | "li" | "tr"
+                    )
+                ) {
                     result.push('\n');
                 }
             }
-            _ if in_tag => { tag_buf.push(ch); }
-            _ if !in_script && !in_style => { result.push(ch); }
+            _ if in_tag => {
+                tag_buf.push(ch);
+            }
+            _ if !in_script && !in_style => {
+                result.push(ch);
+            }
             _ => {}
         }
     }
@@ -43,8 +55,16 @@ pub fn extract_html(content: &[u8]) -> Option<String> {
         .replace("&#39;", "'")
         .replace("&apos;", "'");
 
-    let result = result.lines().map(|l| l.trim_end()).collect::<Vec<_>>().join("\n");
+    let result = result
+        .lines()
+        .map(|l| l.trim_end())
+        .collect::<Vec<_>>()
+        .join("\n");
 
     let trimmed = result.trim();
-    if trimmed.is_empty() { None } else { Some(trimmed.to_string()) }
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed.to_string())
+    }
 }

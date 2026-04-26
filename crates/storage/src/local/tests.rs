@@ -2,9 +2,9 @@
 
 #[cfg(test)]
 mod tests {
+    use super::super::super::client::{ChunkPayload, SearchFilter, SearchOptions};
     use super::super::store::{LocalStore, cosine_similarity_fn as cosine_similarity};
     use super::super::types::VectorPoint;
-    use super::super::super::client::{SearchOptions, SearchFilter, ChunkPayload};
     use tempfile::TempDir;
 
     fn make_payload(id: &str, language: &str, file: &str) -> ChunkPayload {
@@ -95,11 +95,13 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let store = LocalStore::open(temp_dir.path()).unwrap();
 
-        let points: Vec<VectorPoint> = (0..5).map(|i| VectorPoint {
-            id: format!("point{}", i),
-            vector: vec![i as f32 / 5.0, (5 - i) as f32 / 5.0, 0.0],
-            payload: make_payload(&format!("point{}", i), "rust", "lib.rs"),
-        }).collect();
+        let points: Vec<VectorPoint> = (0..5)
+            .map(|i| VectorPoint {
+                id: format!("point{}", i),
+                vector: vec![i as f32 / 5.0, (5 - i) as f32 / 5.0, 0.0],
+                payload: make_payload(&format!("point{}", i), "rust", "lib.rs"),
+            })
+            .collect();
 
         store.upsert_batch(points).unwrap();
         store.flush().unwrap();
@@ -114,16 +116,36 @@ mod tests {
 
         // Insert points with known vectors
         let points = vec![
-            VectorPoint { id: "a".to_string(), vector: vec![1.0, 0.0, 0.0], payload: make_payload("a", "rust", "lib.rs") },
-            VectorPoint { id: "b".to_string(), vector: vec![0.9, 0.1, 0.0], payload: make_payload("b", "rust", "lib.rs") },
-            VectorPoint { id: "c".to_string(), vector: vec![0.0, 1.0, 0.0], payload: make_payload("c", "rust", "lib.rs") },
+            VectorPoint {
+                id: "a".to_string(),
+                vector: vec![1.0, 0.0, 0.0],
+                payload: make_payload("a", "rust", "lib.rs"),
+            },
+            VectorPoint {
+                id: "b".to_string(),
+                vector: vec![0.9, 0.1, 0.0],
+                payload: make_payload("b", "rust", "lib.rs"),
+            },
+            VectorPoint {
+                id: "c".to_string(),
+                vector: vec![0.0, 1.0, 0.0],
+                payload: make_payload("c", "rust", "lib.rs"),
+            },
         ];
         store.upsert_batch(points).unwrap();
         store.flush().unwrap();
 
         // Search for [1.0, 0.0, 0.0]
         let query = vec![1.0, 0.0, 0.0];
-        let results = store.search(&query, SearchOptions { limit: 3, ..Default::default() }).unwrap();
+        let results = store
+            .search(
+                &query,
+                SearchOptions {
+                    limit: 3,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
 
         assert_eq!(results.len(), 3);
         // "a" should be first (perfect match)
@@ -142,18 +164,34 @@ mod tests {
         let store = LocalStore::open(temp_dir.path()).unwrap();
 
         let points = vec![
-            VectorPoint { id: "rust_fn".to_string(), vector: vec![1.0, 0.0], payload: make_payload("rust_fn", "rust", "lib.rs") },
-            VectorPoint { id: "py_fn".to_string(), vector: vec![0.9, 0.1], payload: make_payload("py_fn", "python", "main.py") },
+            VectorPoint {
+                id: "rust_fn".to_string(),
+                vector: vec![1.0, 0.0],
+                payload: make_payload("rust_fn", "rust", "lib.rs"),
+            },
+            VectorPoint {
+                id: "py_fn".to_string(),
+                vector: vec![0.9, 0.1],
+                payload: make_payload("py_fn", "python", "main.py"),
+            },
         ];
         store.upsert_batch(points).unwrap();
         store.flush().unwrap();
 
         let query = vec![1.0, 0.0];
-        let results = store.search(&query, SearchOptions {
-            limit: 10,
-            filter: Some(SearchFilter { language: Some("rust".to_string()), ..Default::default() }),
-            ..Default::default()
-        }).unwrap();
+        let results = store
+            .search(
+                &query,
+                SearchOptions {
+                    limit: 10,
+                    filter: Some(SearchFilter {
+                        language: Some("rust".to_string()),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
 
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].id, "rust_fn");
@@ -165,18 +203,31 @@ mod tests {
         let store = LocalStore::open(temp_dir.path()).unwrap();
 
         let points = vec![
-            VectorPoint { id: "close".to_string(), vector: vec![0.95, 0.05], payload: make_payload("close", "rust", "lib.rs") },
-            VectorPoint { id: "far".to_string(), vector: vec![0.1, 0.9], payload: make_payload("far", "rust", "lib.rs") },
+            VectorPoint {
+                id: "close".to_string(),
+                vector: vec![0.95, 0.05],
+                payload: make_payload("close", "rust", "lib.rs"),
+            },
+            VectorPoint {
+                id: "far".to_string(),
+                vector: vec![0.1, 0.9],
+                payload: make_payload("far", "rust", "lib.rs"),
+            },
         ];
         store.upsert_batch(points).unwrap();
         store.flush().unwrap();
 
         let query = vec![1.0, 0.0];
-        let results = store.search(&query, SearchOptions {
-            limit: 10,
-            score_threshold: Some(0.8),
-            ..Default::default()
-        }).unwrap();
+        let results = store
+            .search(
+                &query,
+                SearchOptions {
+                    limit: 10,
+                    score_threshold: Some(0.8),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
 
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].id, "close");
@@ -188,8 +239,16 @@ mod tests {
         let store = LocalStore::open(temp_dir.path()).unwrap();
 
         let points = vec![
-            VectorPoint { id: "keep".to_string(), vector: vec![1.0], payload: make_payload("keep", "rust", "lib.rs") },
-            VectorPoint { id: "delete".to_string(), vector: vec![0.5], payload: make_payload("delete", "rust", "lib.rs") },
+            VectorPoint {
+                id: "keep".to_string(),
+                vector: vec![1.0],
+                payload: make_payload("keep", "rust", "lib.rs"),
+            },
+            VectorPoint {
+                id: "delete".to_string(),
+                vector: vec![0.5],
+                payload: make_payload("delete", "rust", "lib.rs"),
+            },
         ];
         store.upsert_batch(points).unwrap();
         store.flush().unwrap();
@@ -208,14 +267,31 @@ mod tests {
         let store = LocalStore::open(temp_dir.path()).unwrap();
 
         let points = vec![
-            VectorPoint { id: "rust1".to_string(), vector: vec![1.0], payload: make_payload("rust1", "rust", "lib.rs") },
-            VectorPoint { id: "rust2".to_string(), vector: vec![0.9], payload: make_payload("rust2", "rust", "mod.rs") },
-            VectorPoint { id: "py1".to_string(), vector: vec![0.8], payload: make_payload("py1", "python", "main.py") },
+            VectorPoint {
+                id: "rust1".to_string(),
+                vector: vec![1.0],
+                payload: make_payload("rust1", "rust", "lib.rs"),
+            },
+            VectorPoint {
+                id: "rust2".to_string(),
+                vector: vec![0.9],
+                payload: make_payload("rust2", "rust", "mod.rs"),
+            },
+            VectorPoint {
+                id: "py1".to_string(),
+                vector: vec![0.8],
+                payload: make_payload("py1", "python", "main.py"),
+            },
         ];
         store.upsert_batch(points).unwrap();
         store.flush().unwrap();
 
-        store.delete_by_filter(&SearchFilter { language: Some("python".to_string()), ..Default::default() }).unwrap();
+        store
+            .delete_by_filter(&SearchFilter {
+                language: Some("python".to_string()),
+                ..Default::default()
+            })
+            .unwrap();
         store.flush().unwrap();
 
         assert_eq!(store.len(), 2);
@@ -267,7 +343,15 @@ mod tests {
         assert_eq!(store.len(), 1);
 
         // Search to verify updated vector
-        let results = store.search(&vec![2.0], SearchOptions { limit: 1, ..Default::default() }).unwrap();
+        let results = store
+            .search(
+                &vec![2.0],
+                SearchOptions {
+                    limit: 1,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].id, "same");
     }

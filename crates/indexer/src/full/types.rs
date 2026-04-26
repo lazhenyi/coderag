@@ -1,12 +1,12 @@
 //! Full indexer types
 
+use crate::IndexConfig;
 use coderag_core::analyzer::Analyzer;
 use coderag_core::chunker::Chunker;
 use coderag_core::document::TextChunker;
 use coderag_core::embedder::Embedder;
 use coderag_core::parser::Parser;
 use coderag_storage::StorageBackend;
-use crate::IndexConfig;
 
 /// Full indexer for complete repository indexing
 pub struct FullIndexer {

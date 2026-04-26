@@ -1,7 +1,7 @@
 //! Binary extractor implementation
 
 use super::html::extract_html;
-use super::ooxml::{extract_docx, extract_odt, extract_ods};
+use super::ooxml::{extract_docx, extract_ods, extract_odt};
 use super::stubs::extract_pdf;
 use super::xls::extract_xls;
 use super::xlsx::extract_xlsx;
@@ -13,7 +13,9 @@ use tracing::warn;
 pub struct BinaryExtractor;
 
 impl BinaryExtractor {
-    pub fn new() -> Self { Self }
+    pub fn new() -> Self {
+        Self
+    }
 
     pub fn extract_text(&self, path: &Path, content: &[u8], format: DocFormat) -> Option<String> {
         match format {
@@ -25,7 +27,11 @@ impl BinaryExtractor {
             DocFormat::Ods => extract_ods(content),
             DocFormat::Pdf => extract_pdf(content),
             _ => {
-                warn!("Unsupported binary format: {:?} for {}", format, path.display());
+                warn!(
+                    "Unsupported binary format: {:?} for {}",
+                    format,
+                    path.display()
+                );
                 None
             }
         }
@@ -37,5 +43,7 @@ impl BinaryExtractor {
 }
 
 impl Default for BinaryExtractor {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }

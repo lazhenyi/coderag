@@ -1,10 +1,15 @@
 //! Go symbol extraction
 
-use crate::analyzer::symbol::SymbolKind;
 use crate::analyzer::extractors::node_helpers::{extract_name, node_to_symbol};
+use crate::analyzer::symbol::SymbolKind;
 
 /// Extract Go symbols
-pub fn extract_go(source: &[u8], node: tree_sitter::Node, file_path: &str, symbols: &mut Vec<crate::analyzer::Symbol>) {
+pub fn extract_go(
+    source: &[u8],
+    node: tree_sitter::Node,
+    file_path: &str,
+    symbols: &mut Vec<crate::analyzer::Symbol>,
+) {
     let node_kind = node.kind();
 
     match node_kind {
@@ -30,11 +35,13 @@ pub fn extract_go(source: &[u8], node: tree_sitter::Node, file_path: &str, symbo
                     for ts_child in child.children(&mut ts_cursor) {
                         let type_name = extract_type_name(source, node);
                         if ts_child.kind() == "struct_type" && !type_name.is_empty() {
-                            let mut symbol = node_to_symbol(source, node, SymbolKind::Struct, file_path);
+                            let mut symbol =
+                                node_to_symbol(source, node, SymbolKind::Struct, file_path);
                             symbol.name = type_name;
                             symbols.push(symbol);
                         } else if ts_child.kind() == "interface_type" && !type_name.is_empty() {
-                            let mut symbol = node_to_symbol(source, node, SymbolKind::Interface, file_path);
+                            let mut symbol =
+                                node_to_symbol(source, node, SymbolKind::Interface, file_path);
                             symbol.name = type_name;
                             symbols.push(symbol);
                         }

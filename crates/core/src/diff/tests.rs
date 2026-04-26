@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use super::super::types::{DiffResult, FileChange, FileChangeType, DiffStats};
+    use super::super::types::{DiffResult, DiffStats, FileChange, FileChangeType};
     use crate::repo::{Oid, SerializableOid};
 
     #[test]

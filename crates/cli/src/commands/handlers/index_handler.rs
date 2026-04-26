@@ -6,19 +6,31 @@ use coderag_core::repo::GitRepo;
 use coderag_indexer::{FullIndexer, IncrementalIndexer, IndexConfig};
 use tracing::info;
 
-pub async fn index_repository(repo_path: &str, branch: &str, full: bool, use_local: bool, cli_config: &Config) -> AnyResult<()> {
+pub async fn index_repository(
+    repo_path: &str,
+    branch: &str,
+    full: bool,
+    use_local: bool,
+    cli_config: &Config,
+) -> AnyResult<()> {
     info!("Indexing repository: {} (branch: {})", repo_path, branch);
 
-    let state_file_path = cli_config.state_file.clone()
+    let state_file_path = cli_config
+        .state_file
+        .clone()
         .unwrap_or_else(|| ".coderag/state.json".to_string());
 
     let config = IndexConfig {
         repo_path: repo_path.to_string(),
         branch: branch.to_string(),
-        qdrant_url: cli_config.qdrant_url.clone()
+        qdrant_url: cli_config
+            .qdrant_url
+            .clone()
             .unwrap_or_else(|| "http://localhost:6333".to_string()),
         qdrant_api_key: cli_config.qdrant_api_key.clone(),
-        collection_name: cli_config.collection_name.clone()
+        collection_name: cli_config
+            .collection_name
+            .clone()
             .unwrap_or_else(|| "coderag".to_string()),
         batch_size: cli_config.batch_size.unwrap_or(100),
         embed_api_url: cli_config.embed_url.clone(),

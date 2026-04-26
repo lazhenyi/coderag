@@ -13,8 +13,15 @@ interface Config { name: string; }
 class Service { method(): void {} }
 function handler() {}
 "#;
-    let result = parser.parse_with_language(ts_code.as_bytes(), Language::TypeScript).unwrap();
-    let symbols = analyzer.extract_symbols(ts_code.as_bytes(), &result.tree, &Language::TypeScript, "test.ts");
+    let result = parser
+        .parse_with_language(ts_code.as_bytes(), Language::TypeScript)
+        .unwrap();
+    let symbols = analyzer.extract_symbols(
+        ts_code.as_bytes(),
+        &result.tree,
+        &Language::TypeScript,
+        "test.ts",
+    );
     let kinds: Vec<_> = symbols.iter().map(|s| s.kind.clone()).collect();
     assert!(kinds.contains(&SymbolKind::Interface));
     assert!(kinds.contains(&SymbolKind::Class));
@@ -30,7 +37,9 @@ struct Point { double x; double y; };
 typedef struct { int id; } User;
 void process() {}
 "#;
-    let result = parser.parse_with_language(c_code.as_bytes(), Language::C).unwrap();
+    let result = parser
+        .parse_with_language(c_code.as_bytes(), Language::C)
+        .unwrap();
     let symbols = analyzer.extract_symbols(c_code.as_bytes(), &result.tree, &Language::C, "test.c");
     let kinds: Vec<_> = symbols.iter().map(|s| s.kind.clone()).collect();
     assert!(kinds.contains(&SymbolKind::Struct));
@@ -45,8 +54,15 @@ fn test_extract_cpp_symbols() {
 class MyClass { public: void method(); };
 namespace util { void helper() {} }
 "#;
-    let result = parser.parse_with_language(cpp_code.as_bytes(), Language::Cpp).unwrap();
-    let symbols = analyzer.extract_symbols(cpp_code.as_bytes(), &result.tree, &Language::Cpp, "test.cpp");
+    let result = parser
+        .parse_with_language(cpp_code.as_bytes(), Language::Cpp)
+        .unwrap();
+    let symbols = analyzer.extract_symbols(
+        cpp_code.as_bytes(),
+        &result.tree,
+        &Language::Cpp,
+        "test.cpp",
+    );
     let kinds: Vec<_> = symbols.iter().map(|s| s.kind.clone()).collect();
     assert!(kinds.contains(&SymbolKind::Class));
     assert!(kinds.contains(&SymbolKind::Function));
@@ -60,8 +76,15 @@ fn test_extract_csharp_symbols() {
 interface IRepository<T> { void Save(T item); }
 class UserService : IRepository<User> { public void Save(User u) {} }
 "#;
-    let result = parser.parse_with_language(cs_code.as_bytes(), Language::CSharp).unwrap();
-    let symbols = analyzer.extract_symbols(cs_code.as_bytes(), &result.tree, &Language::CSharp, "test.cs");
+    let result = parser
+        .parse_with_language(cs_code.as_bytes(), Language::CSharp)
+        .unwrap();
+    let symbols = analyzer.extract_symbols(
+        cs_code.as_bytes(),
+        &result.tree,
+        &Language::CSharp,
+        "test.cs",
+    );
     let kinds: Vec<_> = symbols.iter().map(|s| s.kind.clone()).collect();
     assert!(kinds.contains(&SymbolKind::Interface));
     assert!(kinds.contains(&SymbolKind::Class));

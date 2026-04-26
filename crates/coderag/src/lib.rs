@@ -47,17 +47,19 @@
 //! | `coderag` | Meta-crate re-exporting all sub-crates |
 
 // Re-export the most commonly used types for ergonomic access
-pub use coderag_core::repo::GitRepo;
-pub use coderag_core::parser::Parser;
 pub use coderag_core::analyzer::Analyzer;
-pub use coderag_core::chunker::Chunker;
+pub use coderag_core::analyzer::{Symbol, SymbolKind};
 pub use coderag_core::chunker::Chunk;
+pub use coderag_core::chunker::Chunker;
 pub use coderag_core::embedder::Embedder;
 pub use coderag_core::embedder::EmbedderConfig;
 pub use coderag_core::parser::Language;
-pub use coderag_core::analyzer::{Symbol, SymbolKind};
+pub use coderag_core::parser::Parser;
+pub use coderag_core::repo::GitRepo;
 
-pub use coderag_storage::{QdrantClient, QdrantConfig, ChunkPayload, SearchResult, SearchOptions, SearchFilter};
 pub use coderag_storage::ChunkRepository;
+pub use coderag_storage::{
+    ChunkPayload, QdrantClient, QdrantConfig, SearchFilter, SearchOptions, SearchResult,
+};
 
 pub use coderag_indexer::{FullIndexer, IncrementalIndexer, IndexConfig, IndexStats};

@@ -84,7 +84,9 @@ pub fn load_config() -> McpConfig {
             .as_ref()
             .and_then(|j| j.embed_url.clone())
             .or_else(|| env_opt("CODERAG_EMBED_URL"))
-            .unwrap_or_else(|| "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings".into()),
+            .unwrap_or_else(|| {
+                "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings".into()
+            }),
         embed_model: json
             .as_ref()
             .and_then(|j| j.embed_model.clone())

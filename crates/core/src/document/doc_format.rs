@@ -89,12 +89,25 @@ impl DocFormat {
 
     /// Check if this format is supported for P0 (pure text)
     pub fn is_p0_supported(&self) -> bool {
-        matches!(self, Self::Markdown | Self::Text | Self::Xml | Self::Json | Self::Toml | Self::Ini | Self::Csv | Self::Log)
+        matches!(
+            self,
+            Self::Markdown
+                | Self::Text
+                | Self::Xml
+                | Self::Json
+                | Self::Toml
+                | Self::Ini
+                | Self::Csv
+                | Self::Log
+        )
     }
 
     /// Check if this format is supported for P1 (binary)
     pub fn is_p1_supported(&self) -> bool {
-        matches!(self, Self::Html | Self::Xlsx | Self::Xls | Self::Ods | Self::Docx | Self::Odt | Self::Pdf)
+        matches!(
+            self,
+            Self::Html | Self::Xlsx | Self::Xls | Self::Ods | Self::Docx | Self::Odt | Self::Pdf
+        )
     }
 
     /// Check if this is an archive format (P2)
@@ -115,10 +128,10 @@ pub fn detect_doc_format(path: &Path) -> DocFormat {
     } else {
         if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
             match name {
-                "LICENSE" | "LICENSE-MIT" | "LICENSE-APACHE" | "COPYING"
-                | "README" | "CHANGELOG" | "CHANGES" | "AUTHORS" => DocFormat::Text,
-                "Makefile" | "makefile" | "Dockerfile" | "Containerfile"
-                | "Vagrantfile" | "Jenkinsfile" => DocFormat::Text,
+                "LICENSE" | "LICENSE-MIT" | "LICENSE-APACHE" | "COPYING" | "README"
+                | "CHANGELOG" | "CHANGES" | "AUTHORS" => DocFormat::Text,
+                "Makefile" | "makefile" | "Dockerfile" | "Containerfile" | "Vagrantfile"
+                | "Jenkinsfile" => DocFormat::Text,
                 _ => DocFormat::Unknown,
             }
         } else {

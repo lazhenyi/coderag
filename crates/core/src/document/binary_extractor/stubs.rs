@@ -7,7 +7,11 @@ pub fn extract_pdf(content: &[u8]) -> Option<String> {
         match pdf_extract::extract_text_from_mem(content) {
             Ok(text) => {
                 let trimmed = text.trim();
-                if trimmed.is_empty() { None } else { Some(trimmed.to_string()) }
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(trimmed.to_string())
+                }
             }
             Err(e) => {
                 tracing::warn!("Failed to extract PDF text: {}", e);

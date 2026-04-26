@@ -22,7 +22,9 @@ pub fn chunk_text(
     let mut chunks = Vec::new();
 
     if text.len() <= config.max_chunk_size {
-        chunks.push(make_chunk(text, 1, 1, language, file_path, repo, branch, commit));
+        chunks.push(make_chunk(
+            text, 1, 1, language, file_path, repo, branch, commit,
+        ));
         return chunks;
     }
 
@@ -42,8 +44,14 @@ pub fn chunk_text(
             if !current_chunk.is_empty() {
                 let chunk_lines = current_chunk.lines().count();
                 chunks.push(make_chunk(
-                    &current_chunk, chunk_start_line, chunk_start_line + chunk_lines - 1,
-                    language, file_path, repo, branch, commit,
+                    &current_chunk,
+                    chunk_start_line,
+                    chunk_start_line + chunk_lines - 1,
+                    language,
+                    file_path,
+                    repo,
+                    branch,
+                    commit,
                 ));
                 current_chunk.clear();
             }
@@ -59,19 +67,33 @@ pub fn chunk_text(
                 }
                 let part = &remaining[..split_at];
                 chunks.push(make_chunk(
-                    part.trim(), line_offset, line_offset + part.lines().count(),
-                    language, file_path, repo, branch, commit,
+                    part.trim(),
+                    line_offset,
+                    line_offset + part.lines().count(),
+                    language,
+                    file_path,
+                    repo,
+                    branch,
+                    commit,
                 ));
                 remaining = &remaining[split_at..];
                 line_offset += part.lines().count();
             }
             current_chunk = remaining.trim().to_string();
             chunk_start_line = line_offset;
-        } else if current_chunk.len() + para.len() + 2 > config.max_chunk_size && !current_chunk.is_empty() {
+        } else if current_chunk.len() + para.len() + 2 > config.max_chunk_size
+            && !current_chunk.is_empty()
+        {
             let chunk_lines = current_chunk.lines().count();
             chunks.push(make_chunk(
-                &current_chunk, chunk_start_line, chunk_start_line + chunk_lines - 1,
-                language, file_path, repo, branch, commit,
+                &current_chunk,
+                chunk_start_line,
+                chunk_start_line + chunk_lines - 1,
+                language,
+                file_path,
+                repo,
+                branch,
+                commit,
             ));
 
             let overlap_text = if current_chunk.len() > config.overlap {
@@ -108,8 +130,14 @@ pub fn chunk_text(
     if !current_chunk.is_empty() {
         let chunk_lines = current_chunk.lines().count();
         chunks.push(make_chunk(
-            &current_chunk, chunk_start_line, chunk_start_line + chunk_lines - 1,
-            language, file_path, repo, branch, commit,
+            &current_chunk,
+            chunk_start_line,
+            chunk_start_line + chunk_lines - 1,
+            language,
+            file_path,
+            repo,
+            branch,
+            commit,
         ));
     }
 
@@ -121,7 +149,16 @@ pub fn chunk_text(
 
         for line in &lines {
             if buf.len() + line.len() + 1 > config.max_chunk_size && !buf.is_empty() {
-                chunks.push(make_chunk(&buf, start, start + buf.lines().count() - 1, language, file_path, repo, branch, commit));
+                chunks.push(make_chunk(
+                    &buf,
+                    start,
+                    start + buf.lines().count() - 1,
+                    language,
+                    file_path,
+                    repo,
+                    branch,
+                    commit,
+                ));
                 buf = String::new();
                 start = line_num;
             }
@@ -132,7 +169,16 @@ pub fn chunk_text(
             line_num += 1;
         }
         if !buf.is_empty() {
-            chunks.push(make_chunk(&buf, start, start + buf.lines().count() - 1, language, file_path, repo, branch, commit));
+            chunks.push(make_chunk(
+                &buf,
+                start,
+                start + buf.lines().count() - 1,
+                language,
+                file_path,
+                repo,
+                branch,
+                commit,
+            ));
         }
     }
 

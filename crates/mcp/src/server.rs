@@ -4,13 +4,13 @@ use std::borrow::Cow;
 
 use futures::future::BoxFuture;
 use parking_lot::RwLock;
-use rmcp::handler::server::common::cached_schema_for_type;
-use rmcp::handler::server::router::tool::ToolRouter;
-use rmcp::handler::server::tool::ToolCallContext;
-use rmcp::handler::server::router::tool::ToolRoute;
-use rmcp::model::{CallToolRequestParam, ListToolsResult, *};
 use rmcp::ErrorData as McpError;
 use rmcp::ServerHandler;
+use rmcp::handler::server::common::cached_schema_for_type;
+use rmcp::handler::server::router::tool::ToolRoute;
+use rmcp::handler::server::router::tool::ToolRouter;
+use rmcp::handler::server::tool::ToolCallContext;
+use rmcp::model::{CallToolRequestParam, ListToolsResult, *};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -57,8 +57,12 @@ struct SearchRequest {
     score_threshold: f32,
 }
 
-fn default_limit() -> usize { 10 }
-fn default_threshold() -> f32 { 0.5 }
+fn default_limit() -> usize {
+    10
+}
+fn default_threshold() -> f32 {
+    0.5
+}
 
 #[derive(Debug, Deserialize, JsonSchema)]
 struct IndexRequest {
@@ -70,7 +74,9 @@ struct IndexRequest {
     local: bool,
 }
 
-fn default_branch() -> String { "main".into() }
+fn default_branch() -> String {
+    "main".into()
+}
 
 #[derive(Debug, Deserialize, JsonSchema)]
 struct GraphSearchRequest {
@@ -92,7 +98,9 @@ struct GraphSearchRequest {
 
 // ─── Helpers ───────────────────────────────────────────────────────
 
-fn parse_args<T: for<'de> Deserialize<'de>>(ctx: &mut ToolCallContext<'_, CodeRagServer>) -> Result<T, McpError> {
+fn parse_args<T: for<'de> Deserialize<'de>>(
+    ctx: &mut ToolCallContext<'_, CodeRagServer>,
+) -> Result<T, McpError> {
     let args = ctx.arguments.take().unwrap_or_default();
     serde_json::from_value(serde_json::Value::Object(args)).map_err(|e| {
         McpError::invalid_params(format!("failed to deserialize parameters: {}", e), None)
@@ -111,7 +119,10 @@ fn empty_schema() -> Arc<serde_json::Map<String, serde_json::Value>> {
     cached_schema_for_type::<()>()
 }
 
-async fn create_storage(config: &McpConfig, use_local: bool) -> anyhow::Result<coderag_storage::StorageBackend> {
+async fn create_storage(
+    config: &McpConfig,
+    use_local: bool,
+) -> anyhow::Result<coderag_storage::StorageBackend> {
     if use_local {
         coderag_storage::StorageBackend::from_config(&coderag_storage::StorageConfig::Local {
             store_path: config.repo_path.clone(),
@@ -124,7 +135,9 @@ async fn create_storage(config: &McpConfig, use_local: bool) -> anyhow::Result<c
             collection_name: config.collection_name.clone(),
             ..Default::default()
         };
-        coderag_storage::StorageBackend::from_config(&coderag_storage::StorageConfig::Qdrant(storage_config))
+        coderag_storage::StorageBackend::from_config(&coderag_storage::StorageConfig::Qdrant(
+            storage_config,
+        ))
     }
 }
 
@@ -139,7 +152,11 @@ fn create_embedder(config: &McpConfig) -> anyhow::Result<coderag_core::embedder:
     coderag_core::embedder::Embedder::new(embedder_config)
 }
 
-fn make_query_chunk(config: &McpConfig, query: &str, language: &str) -> coderag_core::chunker::Chunk {
+fn make_query_chunk(
+    config: &McpConfig,
+    query: &str,
+    language: &str,
+) -> coderag_core::chunker::Chunk {
     coderag_core::chunker::Chunk {
         id: "query".into(),
         content_hash: "".into(),
@@ -531,7 +548,10 @@ fn repo_info_tool() -> ToolRoute<CodeRagServer> {
         Tool {
             name: "repo_info".into(),
             title: None,
-            description: Some("Get repository information including current branch, HEAD commit, and file count.".into()),
+            description: Some(
+                "Get repository information including current branch, HEAD commit, and file count."
+                    .into(),
+            ),
             input_schema: empty_schema(),
             output_schema: None,
             annotations: None,
@@ -576,7 +596,9 @@ fn repo_tree_tool() -> ToolRoute<CodeRagServer> {
         Tool {
             name: "repo_tree".into(),
             title: None,
-            description: Some("List the file tree of the repository. Returns all tracked file paths.".into()),
+            description: Some(
+                "List the file tree of the repository. Returns all tracked file paths.".into(),
+            ),
             input_schema: empty_schema(),
             output_schema: None,
             annotations: None,
@@ -589,13 +611,16 @@ fn repo_tree_tool() -> ToolRoute<CodeRagServer> {
                     let repo = coderag_core::repo::GitRepo::open(&repo_path)
                         .map_err(|e| err_internal(format!("Failed to open repo: {}", e)))?;
 
-                    let head = repo.head_commit()
+                    let head = repo
+                        .head_commit()
                         .map_err(|e| err_internal(format!("Failed to get HEAD: {}", e)))?;
 
-                    let tree = repo.commit_to_tree(head.oid.inner())
+                    let tree = repo
+                        .commit_to_tree(head.oid.inner())
                         .map_err(|e| err_internal(format!("Failed to read tree: {}", e)))?;
 
-                    let files = repo.walk_tree(&tree)
+                    let files = repo
+                        .walk_tree(&tree)
                         .map_err(|e| err_internal(format!("Failed to walk tree: {}", e)))?;
 
                     let mut text = format!("## File Tree ({} files)\n\n", files.len());
@@ -607,7 +632,8 @@ fn repo_tree_tool() -> ToolRoute<CodeRagServer> {
                     }
 
                     Ok::<_, McpError>(text)
-                }).await;
+                })
+                .await;
 
                 match result {
                     Ok(Ok(text)) => Ok(CallToolResult::success(vec![Content::text(text)])),
@@ -624,7 +650,9 @@ fn list_languages_tool() -> ToolRoute<CodeRagServer> {
         Tool {
             name: "list_languages".into(),
             title: None,
-            description: Some("List all supported programming languages for AST-based symbol extraction.".into()),
+            description: Some(
+                "List all supported programming languages for AST-based symbol extraction.".into(),
+            ),
             input_schema: empty_schema(),
             output_schema: None,
             annotations: None,
@@ -660,7 +688,9 @@ fn list_languages_tool() -> ToolRoute<CodeRagServer> {
                 text.push_str(&format!("- **{}**: {}\n", name, exts.join(", ")));
             }
 
-            Box::pin(std::future::ready(Ok(CallToolResult::success(vec![Content::text(text)]))))
+            Box::pin(std::future::ready(Ok(CallToolResult::success(vec![
+                Content::text(text),
+            ]))))
         },
     )
 }
@@ -694,7 +724,8 @@ impl ServerHandler for CodeRagServer {
         &self,
         _request: Option<rmcp::model::PaginatedRequestParam>,
         _context: rmcp::service::RequestContext<rmcp::service::RoleServer>,
-    ) -> impl std::future::Future<Output = std::result::Result<ListToolsResult, McpError>> + Send + '_ {
+    ) -> impl std::future::Future<Output = std::result::Result<ListToolsResult, McpError>> + Send + '_
+    {
         let router = self.tool_router();
         let tools = router.list_all();
         std::future::ready(Ok(ListToolsResult::with_all_items(tools)))

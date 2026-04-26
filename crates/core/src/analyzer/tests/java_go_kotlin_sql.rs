@@ -24,8 +24,15 @@ interface MyInterface { void interfaceMethod(); }
 enum MyEnum { A, B, C; MyEnum() {} void enumMethod() {} }
 "#;
 
-    let result = parser.parse_with_language(java_code.as_bytes(), Language::Java).unwrap();
-    let symbols = analyzer.extract_symbols(java_code.as_bytes(), &result.tree, &Language::Java, "MyClass.java");
+    let result = parser
+        .parse_with_language(java_code.as_bytes(), Language::Java)
+        .unwrap();
+    let symbols = analyzer.extract_symbols(
+        java_code.as_bytes(),
+        &result.tree,
+        &Language::Java,
+        "MyClass.java",
+    );
     let kinds: Vec<_> = symbols.iter().map(|s| s.kind.clone()).collect();
     assert!(kinds.contains(&SymbolKind::Class));
     assert!(kinds.contains(&SymbolKind::Interface));
@@ -50,8 +57,11 @@ const MyConst = 42
 var MyVar = "hello"
 "#;
 
-    let result = parser.parse_with_language(go_code.as_bytes(), Language::Go).unwrap();
-    let symbols = analyzer.extract_symbols(go_code.as_bytes(), &result.tree, &Language::Go, "main.go");
+    let result = parser
+        .parse_with_language(go_code.as_bytes(), Language::Go)
+        .unwrap();
+    let symbols =
+        analyzer.extract_symbols(go_code.as_bytes(), &result.tree, &Language::Go, "main.go");
     let kinds: Vec<_> = symbols.iter().map(|s| s.kind.clone()).collect();
     assert!(kinds.contains(&SymbolKind::Struct));
     assert!(kinds.contains(&SymbolKind::Interface));
@@ -72,8 +82,15 @@ fun topLevelFunction(): Boolean { return true }
 enum class Color { RED, GREEN, BLUE }
 "#;
 
-    let result = parser.parse_with_language(kotlin_code.as_bytes(), Language::Kotlin).unwrap();
-    let symbols = analyzer.extract_symbols(kotlin_code.as_bytes(), &result.tree, &Language::Kotlin, "test.kt");
+    let result = parser
+        .parse_with_language(kotlin_code.as_bytes(), Language::Kotlin)
+        .unwrap();
+    let symbols = analyzer.extract_symbols(
+        kotlin_code.as_bytes(),
+        &result.tree,
+        &Language::Kotlin,
+        "test.kt",
+    );
     let kinds: Vec<_> = symbols.iter().map(|s| s.kind.clone()).collect();
     assert!(kinds.contains(&SymbolKind::Class));
     assert!(kinds.contains(&SymbolKind::Function));
@@ -91,8 +108,15 @@ CREATE PROCEDURE update_user_email(user_id INTEGER, new_email TEXT) LANGUAGE SQL
 CREATE VIEW active_users AS SELECT id, name FROM users WHERE active = 1;
 "#;
 
-    let result = parser.parse_with_language(sql_code.as_bytes(), Language::Sql).unwrap();
-    let symbols = analyzer.extract_symbols(sql_code.as_bytes(), &result.tree, &Language::Sql, "schema.sql");
+    let result = parser
+        .parse_with_language(sql_code.as_bytes(), Language::Sql)
+        .unwrap();
+    let symbols = analyzer.extract_symbols(
+        sql_code.as_bytes(),
+        &result.tree,
+        &Language::Sql,
+        "schema.sql",
+    );
     let kinds: Vec<_> = symbols.iter().map(|s| s.kind.clone()).collect();
     assert!(kinds.contains(&SymbolKind::Class));
     assert!(kinds.contains(&SymbolKind::Function));

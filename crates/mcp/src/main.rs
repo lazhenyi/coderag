@@ -14,8 +14,7 @@ mod server;
 
 use axum::{Router, routing::get};
 use rmcp::transport::streamable_http_server::{
-    session::local::LocalSessionManager,
-    StreamableHttpService,
+    StreamableHttpService, session::local::LocalSessionManager,
 };
 use server::CodeRagServer;
 

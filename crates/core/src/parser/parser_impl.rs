@@ -2,8 +2,8 @@
 
 use super::languages::Language;
 use super::registry::LanguageRegistry;
-use std::path::Path;
 use anyhow::{Context, Result as AnyResult};
+use std::path::Path;
 
 /// Result of parsing a source file
 pub struct ParseResult {
@@ -59,10 +59,13 @@ impl Parser {
             .get_tree_sitter_language(&language)
             .context("Language not registered")?;
 
-        ts_parser.set_language(&ts_language).context("Failed to set language")?;
+        ts_parser
+            .set_language(&ts_language)
+            .context("Failed to set language")?;
 
-        let result =
-            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| ts_parser.parse(source, None)));
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            ts_parser.parse(source, None)
+        }));
 
         match result {
             Ok(Some(tree)) => Ok(ParseResult { tree, language }),

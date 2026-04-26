@@ -2,8 +2,10 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::document::text_chunker::{TextChunker, TextChunkConfig, strip_markdown, strip_xml_tags};
     use crate::document::DocFormat;
+    use crate::document::text_chunker::{
+        TextChunkConfig, TextChunker, strip_markdown, strip_xml_tags,
+    };
     use std::path::Path;
 
     #[test]
@@ -96,7 +98,11 @@ Plain text at end."#;
             )
             .unwrap();
 
-        assert!(chunks.len() > 1, "Expected multiple chunks, got {}", chunks.len());
+        assert!(
+            chunks.len() > 1,
+            "Expected multiple chunks, got {}",
+            chunks.len()
+        );
         assert_eq!(chunks[0].language, "markdown");
     }
 

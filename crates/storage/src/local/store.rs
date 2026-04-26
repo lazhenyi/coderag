@@ -1,9 +1,9 @@
 //! Local vector store implementation
 
-use super::types::{VectorPoint, LocalStoreStats};
+use super::types::{LocalStoreStats, VectorPoint};
 use anyhow::{Context, Result as AnyResult};
-use std::path::{Path, PathBuf};
 use std::fs;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 
 /// Local file-based vector store
@@ -44,15 +44,18 @@ impl LocalStore {
         };
 
         if !embed_path.exists() {
-            fs::create_dir_all(&embed_path)
-                .with_context(|| format!("Failed to create embed directory: {}", embed_path.display()))?;
+            fs::create_dir_all(&embed_path).with_context(|| {
+                format!("Failed to create embed directory: {}", embed_path.display())
+            })?;
         }
 
         Self::open(embed_path)
     }
 
     /// Get the store path
-    pub fn path(&self) -> &Path { &self.store_path }
+    pub fn path(&self) -> &Path {
+        &self.store_path
+    }
 
     /// Upsert a single point
     pub fn upsert(&self, point: VectorPoint) -> AnyResult<()> {
@@ -98,8 +101,8 @@ impl LocalStore {
         drop(dirty);
 
         let points = self.points.read().unwrap();
-        let content = serde_json::to_string_pretty(&*points)
-            .context("Failed to serialize points")?;
+        let content =
+            serde_json::to_string_pretty(&*points).context("Failed to serialize points")?;
 
         let data_file = self.store_path.join("vectors.json");
         fs::write(&data_file, content)
@@ -129,7 +132,12 @@ impl LocalStore {
         LocalStoreStats {
             total_points: points.len(),
             vector_dimension: dim,
-            file_size_bytes: self.store_path.join("vectors.json").metadata().map(|m| m.len()).unwrap_or(0),
+            file_size_bytes: self
+                .store_path
+                .join("vectors.json")
+                .metadata()
+                .map(|m| m.len())
+                .unwrap_or(0),
         }
     }
 

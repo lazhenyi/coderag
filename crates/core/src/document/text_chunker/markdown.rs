@@ -59,9 +59,14 @@ fn strip_links(text: &str) -> String {
                     chars.next();
                     let mut depth = 1;
                     while let Some(c) = chars.next() {
-                        if c == '(' { depth += 1; }
-                        else if c == ')' { depth -= 1; }
-                        if depth == 0 { break; }
+                        if c == '(' {
+                            depth += 1;
+                        } else if c == ')' {
+                            depth -= 1;
+                        }
+                        if depth == 0 {
+                            break;
+                        }
                     }
                 }
             }
@@ -83,17 +88,27 @@ fn strip_images(text: &str) -> String {
             chars.next();
             let mut depth = 1;
             while let Some(c) = chars.next() {
-                if c == '[' { depth += 1; }
-                else if c == ']' { depth -= 1; }
-                if depth == 0 { break; }
+                if c == '[' {
+                    depth += 1;
+                } else if c == ']' {
+                    depth -= 1;
+                }
+                if depth == 0 {
+                    break;
+                }
             }
             if chars.peek() == Some(&'(') {
                 chars.next();
                 let mut depth = 1;
                 while let Some(c) = chars.next() {
-                    if c == '(' { depth += 1; }
-                    else if c == ')' { depth -= 1; }
-                    if depth == 0 { break; }
+                    if c == '(' {
+                        depth += 1;
+                    } else if c == ')' {
+                        depth -= 1;
+                    }
+                    if depth == 0 {
+                        break;
+                    }
                 }
             }
         } else {
